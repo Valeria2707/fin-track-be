@@ -1,0 +1,41 @@
+services:
+  postgresdb:
+    image: postgres:13
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker-initdb:/docker-entrypoint-initdb.d
+    ports:
+      - '${DB_PORT}:${DB_PORT}'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER} -d ${DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - db_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '${APP_PORT}:${APP_PORT}'
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - db_network
+
+volumes:
+  db-data:
+
+networks:
+  db_network:
+    driver: bridge
