@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -12,10 +12,12 @@ export class TransactionService {
     private readonly transactionRepository: Repository<Transaction>,
   ) {}
 
-  async create(
-    createTransactionDto: CreateTransactionDto,
-  ): Promise<Transaction> {
-    const transaction = this.transactionRepository.create(createTransactionDto);
+  async create(createTransactionDto: CreateTransactionDto): Promise<Transaction> {
+    const transaction = this.transactionRepository.create({
+      ...createTransactionDto,
+      category: { id: createTransactionDto.category_id },
+    });
+
     return await this.transactionRepository.save(transaction);
   }
 
@@ -24,19 +26,17 @@ export class TransactionService {
     category_id?: number,
     fromDate?: Date,
     toDate?: Date,
-  ): Promise<Transaction[]> {
-    const queryBuilder = this.transactionRepository
-      .createQueryBuilder('transaction')
-      .leftJoinAndSelect('transaction.category', 'category');
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ data: Transaction[]; total: number; page: number; limit: number }> {
+    const queryBuilder = this.transactionRepository.createQueryBuilder('transaction').leftJoinAndSelect('transaction.category', 'category');
 
     if (type) {
       queryBuilder.andWhere('transaction.type = :type', { type });
     }
 
     if (category_id) {
-      queryBuilder.andWhere('transaction.category_id = :category_id', {
-        category_id,
-      });
+      queryBuilder.andWhere('transaction.category_id = :category_id', { category_id });
     }
 
     if (fromDate) {
@@ -47,42 +47,43 @@ export class TransactionService {
       queryBuilder.andWhere('transaction.date <= :toDate', { toDate });
     }
 
-    return await queryBuilder.getMany();
+    const total = await queryBuilder.getCount();
+
+    queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('transaction.date', 'DESC');
+
+    const data = await queryBuilder.getMany();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
-  async findOne(id: number): Promise<Transaction> {
-    const transaction = await this.transactionRepository.findOne({
+  async findOne(id: number): Promise<Transaction | null> {
+    return this.transactionRepository.findOne({
       where: { id },
       relations: ['category'],
     });
-
-    if (!transaction) {
-      throw new NotFoundException(`Transaction with ID ${id} not found`);
-    }
-
-    return transaction;
   }
 
-  async update(
-    id: number,
-    updateTransactionDto: UpdateTransactionDto,
-  ): Promise<Transaction> {
+  async update(id: number, updateTransactionDto: UpdateTransactionDto): Promise<Transaction | null> {
     const transaction = await this.transactionRepository.preload({
       id,
       ...updateTransactionDto,
     });
 
-    if (!transaction) {
-      throw new NotFoundException(`Transaction with ID ${id} not found`);
-    }
+    if (!transaction) return null;
 
     return await this.transactionRepository.save(transaction);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<boolean> {
     const result = await this.transactionRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Transaction with ID ${id} not found`);
-    }
+    return result.affected !== 0;
   }
 }

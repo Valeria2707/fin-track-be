@@ -6,10 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TransactionModule } from 'src/transaction/transaction.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Category]),
-    forwardRef(() => TransactionModule),
-  ],
+  imports: [TypeOrmModule.forFeature([Category]), forwardRef(() => TransactionModule)],
   controllers: [CategoryController],
   providers: [CategoryService],
   exports: [CategoryService],

@@ -5,7 +5,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class SignInUserDto implements ISignInUser {
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'User email address.',
     example: 'Bob@gmail.com',
   })
   @IsEmail()
@@ -13,7 +13,7 @@ export class SignInUserDto implements ISignInUser {
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'User password.',
     example: 'SomePassword',
   })
   @IsString()

@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Category } from '../../category/entity/category';
 
 @Entity('transactions')
@@ -26,6 +20,9 @@ export class Transaction {
 
   @Column({ nullable: true })
   description: string;
+
+  @Column({ nullable: false })
+  category_id: number;
 
   @ManyToOne(() => Category, category => category.transactions, {
     nullable: false,

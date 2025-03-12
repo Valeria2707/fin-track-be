@@ -1,12 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsDate,
-  IsNumber,
-  IsOptional,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { IsDate, IsNumber, IsOptional, IsPositive, IsString, ValidateNested } from 'class-validator';
 import { ResponseGetCategoryDto } from 'src/category/dto/response-get-category.dto';
 
 export class ResponseTransactionDto {
@@ -28,8 +22,9 @@ export class ResponseTransactionDto {
   category: ResponseGetCategoryDto;
 
   @ApiProperty()
-  @IsString()
-  amount: string;
+  @IsNumber()
+  @IsPositive()
+  amount: number;
 
   @ApiProperty()
   @IsDate()

@@ -1,11 +1,6 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { CategoryService } from './category.service';
-import {
-  ApiBadRequestResponse,
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ResponseGetCategoryDto } from './dto/response-get-category.dto';
 
 @ApiTags('Category')
@@ -15,7 +10,7 @@ export class CategoryController {
 
   @ApiOperation({ summary: 'Get categories.' })
   @ApiCreatedResponse({
-    description: 'Created Succesfully',
+    description: 'Created Successfully',
     type: ResponseGetCategoryDto,
     isArray: true,
   })
@@ -27,13 +22,19 @@ export class CategoryController {
 
   @ApiOperation({ summary: 'Get category by id.' })
   @ApiCreatedResponse({
-    description: 'Created Succesfully',
+    description: 'Created Successfully',
     type: ResponseGetCategoryDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.categoryService.findOne(+id);
+    const category = this.categoryService.findOne(+id);
+
+    if (!category) {
+      throw new NotFoundException(`Category with ID ${id} not found`);
+    }
+
+    return category;
   }
 }

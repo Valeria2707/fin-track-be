@@ -1,10 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDate, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 export class CreateTransactionDto {
   @ApiProperty({
     type: Number,
-    description: 'This is a required property',
+    description: 'ID of the user who created the transaction',
     example: 1,
   })
   @IsNumber()
@@ -12,7 +12,7 @@ export class CreateTransactionDto {
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'Type of transaction (e.g., income, expense)',
     example: 'income',
   })
   @IsString()
@@ -20,23 +20,25 @@ export class CreateTransactionDto {
 
   @ApiProperty({
     type: Number,
-    description: 'This is a required property',
+    description: 'Category ID to which this transaction belongs',
     example: 2,
   })
   @IsNumber()
+  @IsNotEmpty({ message: 'category_id must not be empty' })
   category_id: number;
 
   @ApiProperty({
     type: Number,
-    description: 'This is a required property',
+    description: 'Amount of money involved in the transaction',
     example: 1500.0,
   })
   @IsNumber()
+  @IsPositive()
   amount: number;
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'Date when the transaction took place',
     example: '2024-12-25T00:00:00.000Z',
   })
   @Type(() => Date)
@@ -45,7 +47,7 @@ export class CreateTransactionDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'This is not a required property',
+    description: 'Additional details or notes about the transaction',
     example: 'Bonus payment',
   })
   @IsString()

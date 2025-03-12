@@ -8,14 +8,11 @@ import { Client } from 'pg';
 export class UserService {
   constructor(@Inject('PG_CLIENT') private readonly client: Client) {}
   async findOne(id: string): Promise<IUser> {
-    const result = await this.client.query(
-      'SELECT * FROM users WHERE id = $1',
-      [id],
-    );
+    const result = await this.client.query('SELECT * FROM users WHERE id = $1', [id]);
     if (!result.rows.length) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    console.log(result.rows[0]);
+
     return result.rows[0];
   }
 
@@ -26,10 +23,7 @@ export class UserService {
     return result.rows[0];
   }
 
-  async findOneAndUpdate(
-    id: string,
-    updateBody: UpdatePartialUserDto,
-  ): Promise<IUser> {
+  async findOneAndUpdate(id: string, updateBody: UpdatePartialUserDto): Promise<IUser> {
     const query = `
       UPDATE users
       SET email = COALESCE($2, email),
@@ -39,14 +33,7 @@ export class UserService {
           refreshtoken = COALESCE($6, refreshtoken)
       WHERE id = $1
       RETURNING *`;
-    const values = [
-      id,
-      updateBody.email,
-      updateBody.name,
-      updateBody.password,
-      updateBody.accessToken,
-      updateBody.refreshtoken,
-    ];
+    const values = [id, updateBody.email, updateBody.name, updateBody.password, updateBody.accessToken, updateBody.refreshtoken];
 
     const result = await this.client.query(query, values);
 
@@ -62,13 +49,7 @@ export class UserService {
     INSERT INTO users (email, name, password, accesstoken, refreshtoken)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING *`;
-    const values = [
-      createUserDto.email,
-      createUserDto.name,
-      createUserDto.password,
-      createUserDto.accessToken,
-      createUserDto.refreshtoken,
-    ];
+    const values = [createUserDto.email, createUserDto.name, createUserDto.password, createUserDto.accessToken, createUserDto.refreshtoken];
 
     const result = await this.client.query(query, values);
 

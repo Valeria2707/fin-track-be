@@ -1,3 +1,5 @@
+import { Status } from '../enum/status.enum';
+
 export interface IGoal {
   id: number;
   user_id: number;
@@ -6,5 +8,5 @@ export interface IGoal {
   current_amount: number;
   deadline: Date;
   description: string;
-  status: 'in-progress' | 'completed' | 'cancelled';
+  status: Status;
 }

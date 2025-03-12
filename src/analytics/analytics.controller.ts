@@ -1,16 +1,7 @@
 import { Controller, Get, Query, Param } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
-import {
-  ApiBadRequestResponse,
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import {
-  ResponseGetExpensesByCategoryDto,
-  ResponseGetIncomeVsExpensesDto,
-  ResponseGetMonthlyAnalyticsDto,
-} from './dto';
+import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ResponseGetExpensesByCategoryDto, ResponseGetIncomeVsExpensesDto, ResponseGetMonthlyAnalyticsDto } from './dto';
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -24,7 +15,7 @@ export class AnalyticsController {
     isArray: true,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get('expenses-by-category/:userId')
+  @Get(':userId/expenses-by-category/')
   async getExpensesByCategory(@Param('userId') userId: string) {
     return this.analyticsService.getExpensesByCategory(userId);
   }
@@ -36,7 +27,7 @@ export class AnalyticsController {
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get('income-vs-expenses/:userId')
+  @Get(':userId/income-vs-expenses')
   async getIncomeVsExpenses(@Param('userId') userId: string) {
     return this.analyticsService.getIncomeVsExpenses(userId);
   }
@@ -48,11 +39,8 @@ export class AnalyticsController {
     isArray: true,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get('monthly/:userId')
-  async getMonthlyAnalytics(
-    @Param('userId') userId: string,
-    @Query('year') year: string,
-  ) {
+  @Get(':userId/monthly')
+  async getMonthlyAnalytics(@Param('userId') userId: string, @Query('year') year: string) {
     const yearNumber = parseInt(year, 10);
     if (isNaN(yearNumber)) {
       throw new Error('Invalid year format');

@@ -4,7 +4,7 @@ import { IsNumber, IsString, ValidateNested } from 'class-validator';
 export class SendQueryDto {
   @ApiProperty({
     type: Number,
-    description: 'ID користувача',
+    description: 'The unique identifier of the user.',
     example: 1,
   })
   @IsNumber()
@@ -12,14 +12,14 @@ export class SendQueryDto {
 
   @ApiProperty({
     type: String,
-    description: 'Повідомлення від користувача',
+    description: 'The message sent by the user.',
     example: 'How can I save more money?',
   })
   @IsString()
   message: string;
 
   @ApiProperty({
-    description: 'Контекст фінансових даних користувача',
+    description: 'Context containing financial data related to the user.',
   })
   @ValidateNested()
   context: Record<string, unknown>;

@@ -6,10 +6,7 @@ import { CategoryModule } from 'src/category/category.module';
 import { Transaction } from './entity/transaction';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Transaction]),
-    forwardRef(() => CategoryModule),
-  ],
+  imports: [TypeOrmModule.forFeature([Transaction]), forwardRef(() => CategoryModule)],
   controllers: [TransactionController],
   providers: [TransactionService],
   exports: [TransactionService],

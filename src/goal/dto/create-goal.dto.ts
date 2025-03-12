@@ -1,18 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsDate,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsDate, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Status } from '../enum/status.enum';
 
 export class CreateGoalDto {
   @ApiProperty({
     type: Number,
-    description: 'This is a required property',
+    description: 'The ID of the user who owns the goal.',
     example: 1,
   })
   @IsNumber()
@@ -20,7 +14,7 @@ export class CreateGoalDto {
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'The title of the financial goal.',
     example: 'Save for a vacation',
   })
   @IsString()
@@ -28,7 +22,7 @@ export class CreateGoalDto {
 
   @ApiProperty({
     type: Number,
-    description: 'This is a required property',
+    description: 'The target amount needed to achieve the goal. Must be at least 1.',
     example: 200000.0,
   })
   @IsNumber()
@@ -37,7 +31,7 @@ export class CreateGoalDto {
 
   @ApiProperty({
     type: Number,
-    description: 'This is a required property',
+    description: 'The current amount saved towards the goal. Must be at least 0.',
     example: 50000.0,
   })
   @IsNumber()
@@ -46,7 +40,7 @@ export class CreateGoalDto {
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'The deadline for achieving the goal.',
     example: '2025-12-31T23:59:59.999Z',
   })
   @IsDate()
@@ -55,7 +49,7 @@ export class CreateGoalDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'This is not a required property',
+    description: 'A detailed description of the financial goal.',
     example: 'Save money for a dream vacation',
   })
   @IsString()
@@ -63,10 +57,10 @@ export class CreateGoalDto {
   description?: string;
 
   @ApiProperty({
-    enum: ['in-progress', 'completed', 'cancelled'],
-    description: 'This is a required property',
+    enum: Status,
+    description: 'The current status of the goal. Must be one of: in-progress, completed, or cancelled. Optional field.',
     example: 'in-progress',
   })
-  @IsEnum(['in-progress', 'completed', 'cancelled'])
-  status: 'in-progress' | 'completed' | 'cancelled';
+  @IsEnum(Status, { message: 'Status must be one of: in-progress, completed, cancelled' })
+  status: Status;
 }

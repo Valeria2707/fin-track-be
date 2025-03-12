@@ -1,18 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Client } from 'pg';
-import {
-  ResponseGetExpensesByCategoryDto,
-  ResponseGetIncomeVsExpensesDto,
-  ResponseGetMonthlyAnalyticsDto,
-} from './dto';
+import { ResponseGetExpensesByCategoryDto, ResponseGetIncomeVsExpensesDto, ResponseGetMonthlyAnalyticsDto } from './dto';
 
 @Injectable()
 export class AnalyticsService {
   constructor(@Inject('PG_CLIENT') private readonly client: Client) {}
 
-  async getExpensesByCategory(
-    userId: string,
-  ): Promise<ResponseGetExpensesByCategoryDto[]> {
+  async getExpensesByCategory(userId: string): Promise<ResponseGetExpensesByCategoryDto[]> {
     const query = `
       SELECT c.name AS category, COALESCE(SUM(t.amount), 0) AS total
       FROM categories c
@@ -27,9 +21,7 @@ export class AnalyticsService {
     }));
   }
 
-  async getIncomeVsExpenses(
-    userId: string,
-  ): Promise<ResponseGetIncomeVsExpensesDto> {
+  async getIncomeVsExpenses(userId: string): Promise<ResponseGetIncomeVsExpensesDto> {
     const query = `
       SELECT 
         SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
@@ -41,10 +33,7 @@ export class AnalyticsService {
     return result.rows[0];
   }
 
-  async getMonthlyAnalytics(
-    userId: string,
-    year: number,
-  ): Promise<ResponseGetMonthlyAnalyticsDto> {
+  async getMonthlyAnalytics(userId: string, year: number): Promise<ResponseGetMonthlyAnalyticsDto> {
     const query = `
       SELECT 
         EXTRACT(MONTH FROM date) AS month,
