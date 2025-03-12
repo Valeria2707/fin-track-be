@@ -8,28 +8,20 @@ import { ResponseGetCategoryDto } from './dto/response-get-category.dto';
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
-  @ApiOperation({ summary: 'Get categories.' })
-  @ApiCreatedResponse({
-    description: 'Created Successfully',
-    type: ResponseGetCategoryDto,
-    isArray: true,
-  })
+  @ApiOperation({ summary: 'Get all categories.' })
+  @ApiCreatedResponse({ description: 'Created Successfully', type: ResponseGetCategoryDto, isArray: true })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Get()
-  findAll() {
-    return this.categoryService.findAll();
+  async findAll() {
+    return await this.categoryService.findAll();
   }
 
   @ApiOperation({ summary: 'Get category by id.' })
-  @ApiCreatedResponse({
-    description: 'Created Successfully',
-    type: ResponseGetCategoryDto,
-    isArray: false,
-  })
+  @ApiCreatedResponse({ description: 'Created Successfully', type: ResponseGetCategoryDto })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    const category = this.categoryService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const category = await this.categoryService.findOne(+id);
 
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found`);
