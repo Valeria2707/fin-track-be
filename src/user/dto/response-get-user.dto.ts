@@ -24,6 +24,16 @@ export class ResponseGetUserDto {
   refreshToken?: string;
 
   @ApiProperty()
+  @IsString()
+  @IsOptional()
+  resetToken?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsDate()
+  resetTokenExpires?: Date;
+
+  @ApiProperty()
   @IsDate()
   created_at: Date;
 

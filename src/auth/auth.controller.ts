@@ -1,7 +1,16 @@
 import { BadRequestException, Body, ConflictException, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Request } from 'express';
-import { ResponseLogoutDto, ResponseRefreshTokenDto, ResponseSignInDto, ResponseSignUpDto, SignInUserDto, SignUpUserDto } from './dto';
+import {
+  ResetPasswordDto,
+  ResponseLogoutDto,
+  ResponseRefreshTokenDto,
+  ResponseResetPasswordDto,
+  ResponseSignInDto,
+  ResponseSignUpDto,
+  SignInUserDto,
+  SignUpUserDto,
+} from './dto';
 import { AccessTokenGuard } from 'src/guards/access-token.guard';
 import { RefreshTokenGuard } from 'src/guards/refresh-token.guard';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -79,5 +88,23 @@ export class AuthController {
     const userId = req.user['sub'];
     const refreshtoken = req.user['refreshtoken'];
     return this.authService.refreshTokens(userId, refreshtoken);
+  }
+
+  @ApiOperation({ summary: 'Password reset' })
+  @ApiCreatedResponse({ description: 'Reset link sent successfully', type: ResponseResetPasswordDto })
+  @ApiBadRequestResponse({ description: 'Invalid email or bad request' })
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    try {
+      const result = await this.authService.resetPassword(dto.email);
+
+      if (!result) {
+        throw new BadRequestException('User with this email does not exist');
+      }
+
+      return { message: 'Reset password link sent to your email' };
+    } catch {
+      throw new BadRequestException('Invalid email or request');
+    }
   }
 }

@@ -4,3 +4,6 @@ export * from './response-logout-user.dto';
 export * from './response-refresh-token.dto';
 export * from './response-sign-in-user.dto';
 export * from './response-sign-up-user.dto';
+export * from './new-password.dto';
+export * from './reset-password.dto';
+export * from './response-reset-password.dto';

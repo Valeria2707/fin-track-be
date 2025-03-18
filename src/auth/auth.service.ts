@@ -6,6 +6,8 @@ import { SignInUserDto, SignUpUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class AuthService {
@@ -113,5 +115,40 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refreshtoken);
 
     return tokens;
+  }
+
+  async resetPassword(email: string) {
+    const user = await this.userService.findOneByEmail(email);
+    if (!user) return null;
+
+    const token = randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.userService.findOneAndUpdate(user.id, {
+      resetToken: token,
+      resetTokenExpires: expiry,
+    });
+
+    const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${token}`;
+
+    const transporter = nodemailer.createTransport({
+      host: 'in-v3.mailjet.com',
+      port: 587,
+      auth: {
+        user: process.env.MAILJET_API_KEY,
+        pass: process.env.MAILJET_SECRET_KEY,
+      },
+    });
+
+    await transporter.sendMail({
+      from: '"Finance Tracker" zavadetska.valeria@lll.kpi.ua',
+      to: user.email,
+      subject: 'Password Reset',
+      html: `
+        <p>Hello ${user.name || ''},</p>
+        <p>Click <a href="${resetLink}">here</a> to reset your password.</p>
+        <p>This link will expire in 1 hour.</p>
+      `,
+    });
   }
 }
