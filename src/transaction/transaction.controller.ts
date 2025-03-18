@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, Put, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Put, NotFoundException, UseGuards } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateTransactionDto, ResponseRemoveTransactionDto, ResponseTransactionDto, UpdateTransactionDto } from './dto';
+import { AccessTokenGuard } from 'src/guards/access-token.guard';
 
+@UseGuards(AccessTokenGuard)
 @ApiTags('Transaction')
 @Controller('transaction')
 export class TransactionController {

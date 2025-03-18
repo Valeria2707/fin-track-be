@@ -17,8 +17,8 @@ import { GoalModule } from './goal/goal.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
-    // UserModule,
-    // AuthModule,
+    UserModule,
+    AuthModule,
     TransactionModule,
     CategoryModule,
     // ReminderModule,

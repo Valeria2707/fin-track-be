@@ -21,11 +21,6 @@ export class ResponseGetUserDto {
   @ApiProperty()
   @IsString()
   @IsOptional()
-  accessToken?: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
   refreshToken?: string;
 
   @ApiProperty()

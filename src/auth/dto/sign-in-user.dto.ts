@@ -1,14 +1,14 @@
-import { IsEmail, IsString } from 'class-validator';
-import { ISignInUser } from '../interface/sign-in-user.interface';
+import { IsEmail, IsString, MinLength } from 'class-validator';
+import { SignInUser } from '../interface/sign-in-user.interface';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class SignInUserDto implements ISignInUser {
+export class SignInUserDto implements SignInUser {
   @ApiProperty({
     type: String,
     description: 'User email address.',
     example: 'Bob@gmail.com',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
   @ApiProperty({
@@ -17,5 +17,6 @@ export class SignInUserDto implements ISignInUser {
     example: 'SomePassword',
   })
   @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
 }

@@ -1,6 +1,6 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ISignUpUserResponse } from './interface/sign-up-user-response.interface';
+import { SignUpUserResponse } from './interface/sign-up-user-response.interface';
 import * as argon2 from 'argon2';
 import { SignInUserDto, SignUpUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
@@ -15,12 +15,12 @@ export class AuthService {
     private readonly userService: UserService,
   ) {}
 
-  async signUp(signUpUserDto: SignUpUserDto): Promise<ISignUpUserResponse> {
+  async signUp(signUpUserDto: SignUpUserDto): Promise<SignUpUserResponse> {
     const { email, password } = signUpUserDto;
 
     const existingUser = await this.userService.findOneByEmail(email);
     if (existingUser) {
-      throw new BadRequestException('User already exists');
+      return null;
     }
 
     const hash = await this.hashData(password);
@@ -40,13 +40,16 @@ export class AuthService {
     return tokens;
   }
 
-  async signIn(signInUserDto: SignInUserDto) {
+  async signIn(signInUserDto: SignInUserDto): Promise<SignUpUserResponse | null> {
     const user = await this.userService.findOneByEmail(signInUserDto.email);
-    if (!user) throw new BadRequestException('User does not exist');
+    if (!user) return null;
+
     const passwordMatches = await argon2.verify(user.password, signInUserDto.password);
-    if (!passwordMatches) throw new BadRequestException('Password is incorrect');
+    if (!passwordMatches) return null;
+
     const tokens = await this.getTokens(user.id, user.email);
     await this.updateRefreshToken(user.id, tokens.refreshtoken);
+
     return tokens;
   }
 

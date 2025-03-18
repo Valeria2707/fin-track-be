@@ -1,62 +1,44 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
-import { IUser } from './interfaces/user.interface';
 import { UpdatePartialUserDto } from './dto/update-partial-user.dto';
-import { Client } from 'pg';
+import { User } from './entity/user';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class UserService {
-  constructor(@Inject('PG_CLIENT') private readonly client: Client) {}
-  async findOne(id: string): Promise<IUser> {
-    const result = await this.client.query('SELECT * FROM users WHERE id = $1', [id]);
-    if (!result.rows.length) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
-    return result.rows[0];
+  async findOne(id: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id } });
   }
 
-  async findOneByEmail(email: string): Promise<IUser> {
-    const query = 'SELECT * FROM users WHERE email = $1';
-    const result = await this.client.query(query, [email]);
-
-    return result.rows[0];
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { email } });
   }
 
-  async findOneAndUpdate(id: string, updateBody: UpdatePartialUserDto): Promise<IUser> {
-    const query = `
-      UPDATE users
-      SET email = COALESCE($2, email),
-          name = COALESCE($3, name),
-          password = COALESCE($4, password),
-          accesstoken = COALESCE($5, accesstoken),
-          refreshtoken = COALESCE($6, refreshtoken)
-      WHERE id = $1
-      RETURNING *`;
-    const values = [id, updateBody.email, updateBody.name, updateBody.password, updateBody.accessToken, updateBody.refreshtoken];
-
-    const result = await this.client.query(query, values);
-
-    if (result.rows.length === 0) {
-      throw new NotFoundException(`Failed to update user with ID ${id}`);
+  async findOneAndUpdate(id: string, updateBody: UpdatePartialUserDto): Promise<User | null> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      return null;
     }
 
-    return result.rows[0];
+    const updatedUser = this.userRepository.merge(user, updateBody);
+    return this.userRepository.save(updatedUser);
   }
 
-  async create(createUserDto: CreateUserDto): Promise<IUser> {
-    const query = `
-    INSERT INTO users (email, name, password, accesstoken, refreshtoken)
-    VALUES ($1, $2, $3, $4, $5)
-    RETURNING *`;
-    const values = [createUserDto.email, createUserDto.name, createUserDto.password, createUserDto.accessToken, createUserDto.refreshtoken];
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const hashedPassword = await argon2.hash(createUserDto.password);
 
-    const result = await this.client.query(query, values);
+    const newUser = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+    });
 
-    if (result.rows.length === 0) {
-      throw new Error('Failed to create user');
-    }
-
-    return result.rows[0];
+    return this.userRepository.save(newUser);
   }
 }

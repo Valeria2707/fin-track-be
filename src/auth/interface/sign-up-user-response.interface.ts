@@ -1,4 +1,4 @@
-export interface ISignUpUserResponse {
+export interface SignUpUserResponse {
   accessToken: string;
   refreshtoken: string;
 }
