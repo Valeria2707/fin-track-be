@@ -1,13 +1,16 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SignUpUserResponse } from './interface/sign-up-user-response.interface';
+import { SignUpUserResponse } from './types/sign-up-user-response.interface';
 import * as argon2 from 'argon2';
 import { SignInUserDto, SignUpUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
-import * as nodemailer from 'nodemailer';
+import { EmailService } from 'src/email/email.service';
+import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
+import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
+import { UserNotFoundException } from './exceptions/user-not-found.exception';
 
 @Injectable()
 export class AuthService {
@@ -15,60 +18,47 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    private readonly emailService: EmailService,
   ) {}
 
   async signUp(signUpUserDto: SignUpUserDto): Promise<SignUpUserResponse> {
-    const { email, password } = signUpUserDto;
+    const { email } = signUpUserDto;
 
     const existingUser = await this.userService.findOneByEmail(email);
     if (existingUser) {
-      return null;
+      throw new UserAlreadyExistsException();
     }
-
-    const hash = await this.hashData(password);
 
     const id = uuidv4();
 
     const newUser = await this.userService.create({
       id,
       ...signUpUserDto,
-      password: hash,
     });
 
     const tokens = await this.getTokens(newUser.id, newUser.email);
-
-    await this.updateRefreshToken(newUser.id, tokens.refreshtoken);
 
     return tokens;
   }
 
   async signIn(signInUserDto: SignInUserDto): Promise<SignUpUserResponse | null> {
     const user = await this.userService.findOneByEmail(signInUserDto.email);
-    if (!user) return null;
+    if (!user) {
+      throw new AuthenticationFailedException('User does not exist');
+    }
 
     const passwordMatches = await argon2.verify(user.password, signInUserDto.password);
-    if (!passwordMatches) return null;
+    if (!passwordMatches) {
+      throw new AuthenticationFailedException('Wrong password');
+    }
 
     const tokens = await this.getTokens(user.id, user.email);
-    await this.updateRefreshToken(user.id, tokens.refreshtoken);
 
     return tokens;
   }
 
-  async logout(userId: string) {
-    return this.userService.findOneAndUpdate(userId, { refreshtoken: null });
-  }
-
   hashData(data: string) {
     return argon2.hash(data);
-  }
-
-  async updateRefreshToken(userId: string, refreshtoken: string) {
-    const hashedRefreshToken = await this.hashData(refreshtoken);
-
-    this.userService.findOneAndUpdate(userId, {
-      refreshtoken: hashedRefreshToken,
-    });
   }
 
   async getTokens(userId: string, email: string) {
@@ -101,28 +91,25 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(userId: string, refreshtoken: string) {
-    const user = await this.userService.findOne(userId);
+  async refreshTokens(refreshtoken: string) {
+    const payload = await this.jwtService.verifyAsync(refreshtoken, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+    });
 
-    const refreshTokenMatches = await argon2.verify(user.refreshtoken, refreshtoken);
-
-    if (!refreshTokenMatches) {
-      throw new ForbiddenException('Access Denied');
-    }
-
-    const tokens = await this.getTokens(user.id, user.email);
-
-    await this.updateRefreshToken(user.id, tokens.refreshtoken);
-
+    const tokens = await this.getTokens(payload.sub, payload.email);
     return tokens;
   }
 
   async resetPassword(email: string) {
     const user = await this.userService.findOneByEmail(email);
-    if (!user) return null;
+
+    if (!user) {
+      throw new UserNotFoundException('User with this email does not exist');
+    }
 
     const token = randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 60 * 60 * 1000);
+    const expiryMinutes = this.configService.get<number>('RESET_TOKEN_EXPIRY_MINUTES');
+    const expiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
     await this.userService.findOneAndUpdate(user.id, {
       resetToken: token,
@@ -131,24 +118,8 @@ export class AuthService {
 
     const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${token}`;
 
-    const transporter = nodemailer.createTransport({
-      host: 'in-v3.mailjet.com',
-      port: 587,
-      auth: {
-        user: process.env.MAILJET_API_KEY,
-        pass: process.env.MAILJET_SECRET_KEY,
-      },
-    });
+    await this.emailService.sendPasswordResetEmail(user.email, user.name, resetLink);
 
-    await transporter.sendMail({
-      from: '"Finance Tracker" zavadetska.valeria@lll.kpi.ua',
-      to: user.email,
-      subject: 'Password Reset',
-      html: `
-        <p>Hello ${user.name || ''},</p>
-        <p>Click <a href="${resetLink}">here</a> to reset your password.</p>
-        <p>This link will expire in 1 hour.</p>
-      `,
-    });
+    return true;
   }
 }

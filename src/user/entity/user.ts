@@ -15,9 +15,6 @@ export class User {
   password: string;
 
   @Column({ nullable: true })
-  refreshtoken?: string;
-
-  @Column({ nullable: true })
   resetToken?: string;
 
   @Column({ type: 'timestamp', nullable: true })

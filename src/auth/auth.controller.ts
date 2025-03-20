@@ -1,19 +1,14 @@
-import { BadRequestException, Body, ConflictException, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Request } from 'express';
-import {
-  ResetPasswordDto,
-  ResponseLogoutDto,
-  ResponseRefreshTokenDto,
-  ResponseResetPasswordDto,
-  ResponseSignInDto,
-  ResponseSignUpDto,
-  SignInUserDto,
-  SignUpUserDto,
-} from './dto';
+import { Response, Request } from 'express';
+import { ResetPasswordDto, ResponseMessageDto, SignInUserDto, SignUpUserDto } from './dto';
 import { AccessTokenGuard } from 'src/guards/access-token.guard';
 import { RefreshTokenGuard } from 'src/guards/refresh-token.guard';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { setAuthCookies } from 'src/utils/setAuthCookies';
+import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
+import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
+import { UserNotFoundException } from './exceptions/user-not-found.exception';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -23,21 +18,23 @@ export class AuthController {
   @ApiOperation({ summary: 'Sign up user' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseSignUpDto,
+    type: ResponseMessageDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Post('sign-up')
-  async signup(@Body() signUpUserDto: SignUpUserDto) {
+  @Post('sign-up')
+  async signup(@Body() signUpUserDto: SignUpUserDto, @Res({ passthrough: true }) res: Response) {
     try {
       const result = await this.authService.signUp(signUpUserDto);
 
-      if (!result) {
+      setAuthCookies(res, result);
+
+      return { message: 'Sign-up successful' };
+    } catch (error) {
+      if (error instanceof UserAlreadyExistsException) {
         throw new ConflictException('Email already exists');
       }
-
-      return result;
-    } catch {
       throw new BadRequestException('Invalid data');
     }
   }
@@ -45,19 +42,22 @@ export class AuthController {
   @ApiOperation({ summary: 'Sign in user' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseSignInDto,
+    type: ResponseMessageDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Post('sign-in')
-  async signin(@Body() signInUserDto: SignInUserDto) {
+  async signin(@Body() signInUserDto: SignInUserDto, @Res({ passthrough: true }) res: Response) {
     try {
       const result = await this.authService.signIn(signInUserDto);
-      if (!result) {
-        throw new BadRequestException('Invalid data');
+
+      setAuthCookies(res, result);
+
+      return { message: 'Sign-in successful' };
+    } catch (error) {
+      if (error instanceof AuthenticationFailedException) {
+        throw new BadRequestException(error.message);
       }
-      return result;
-    } catch {
       throw new BadRequestException('Invalid data');
     }
   }
@@ -65,45 +65,54 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout user' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseLogoutDto,
+    type: ResponseMessageDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @UseGuards(AccessTokenGuard)
   @Post('logout')
-  async logout(@Req() req: Request) {
-    this.authService.logout(req.user['sub']);
+  @UseGuards(AccessTokenGuard)
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+    return { message: 'Logged out successfully' };
   }
 
   @ApiOperation({ summary: 'Refresh token' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseRefreshTokenDto,
+    type: ResponseMessageDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
-  refreshTokens(@Req() req: Request) {
-    const userId = req.user['sub'];
-    const refreshtoken = req.user['refreshtoken'];
-    return this.authService.refreshTokens(userId, refreshtoken);
+  async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token not found in cookies');
+    }
+
+    const tokens = await this.authService.refreshTokens(refreshToken);
+
+    setAuthCookies(res, tokens);
+
+    return { message: 'Token refreshed' };
   }
 
   @ApiOperation({ summary: 'Password reset' })
-  @ApiCreatedResponse({ description: 'Reset link sent successfully', type: ResponseResetPasswordDto })
+  @ApiCreatedResponse({ description: 'Reset link sent successfully', type: ResponseMessageDto })
   @ApiBadRequestResponse({ description: 'Invalid email or bad request' })
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     try {
-      const result = await this.authService.resetPassword(dto.email);
-
-      if (!result) {
-        throw new BadRequestException('User with this email does not exist');
-      }
-
+      await this.authService.resetPassword(dto.email);
       return { message: 'Reset password link sent to your email' };
-    } catch {
+    } catch (error) {
+      if (error instanceof UserNotFoundException) {
+        throw new BadRequestException(error.message);
+      }
       throw new BadRequestException('Invalid email or request');
     }
   }

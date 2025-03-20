@@ -37,7 +37,7 @@ export class UserController {
   async create(@Body() createUserDto: CreateUserDto) {
     try {
       return await this.userService.create(createUserDto);
-    } catch (error) {
+    } catch {
       throw new BadRequestException('Failed to create user');
     }
   }

@@ -22,13 +22,8 @@ export class UserService {
   }
 
   async findOneAndUpdate(id: string, updateBody: UpdatePartialUserDto): Promise<User | null> {
-    const user = await this.userRepository.findOne({ where: { id } });
-    if (!user) {
-      return null;
-    }
-
-    const updatedUser = this.userRepository.merge(user, updateBody);
-    return this.userRepository.save(updatedUser);
+    await this.userRepository.update(id, updateBody);
+    return this.userRepository.findOne({ where: { id } });
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {

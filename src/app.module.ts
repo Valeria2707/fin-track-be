@@ -12,6 +12,7 @@ import { AiQueriesModule } from './ai-queries/ai-queries.module';
 import { ReportModule } from './report/report.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { GoalModule } from './goal/goal.module';
+import { EmailService } from './email/email.service';
 
 @Module({
   imports: [
@@ -28,6 +29,6 @@ import { GoalModule } from './goal/goal.module';
     // GoalModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, EmailService],
 })
 export class AppModule {}
