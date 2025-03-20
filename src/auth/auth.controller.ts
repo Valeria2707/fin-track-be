@@ -1,7 +1,7 @@
 import { BadRequestException, Body, ConflictException, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response, Request } from 'express';
-import { ResetPasswordDto, ResponseMessageDto, SignInUserDto, SignUpUserDto } from './dto';
+import { NewPasswordDto, ResetPasswordDto, ResponseMessageDto, ResponseTokensDto, SignInUserDto, SignUpUserDto } from './dto';
 import { AccessTokenGuard } from 'src/guards/access-token.guard';
 import { RefreshTokenGuard } from 'src/guards/refresh-token.guard';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -9,6 +9,7 @@ import { setAuthCookies } from 'src/utils/setAuthCookies';
 import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
 import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
 import { UserNotFoundException } from './exceptions/user-not-found.exception';
+import { InvalidResetTokenException } from './exceptions/invalid-reset-token.exception';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -18,7 +19,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Sign up user' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseMessageDto,
+    type: ResponseTokensDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
@@ -30,7 +31,7 @@ export class AuthController {
 
       setAuthCookies(res, result);
 
-      return { message: 'Sign-up successful' };
+      return result;
     } catch (error) {
       if (error instanceof UserAlreadyExistsException) {
         throw new ConflictException('Email already exists');
@@ -42,7 +43,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Sign in user' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseMessageDto,
+    type: ResponseTokensDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
@@ -53,7 +54,7 @@ export class AuthController {
 
       setAuthCookies(res, result);
 
-      return { message: 'Sign-in successful' };
+      return result;
     } catch (error) {
       if (error instanceof AuthenticationFailedException) {
         throw new BadRequestException(error.message);
@@ -81,7 +82,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh token' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseMessageDto,
+    type: ResponseTokensDto,
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
@@ -98,7 +99,7 @@ export class AuthController {
 
     setAuthCookies(res, tokens);
 
-    return { message: 'Token refreshed' };
+    return tokens;
   }
 
   @ApiOperation({ summary: 'Password reset' })
@@ -114,6 +115,22 @@ export class AuthController {
         throw new BadRequestException(error.message);
       }
       throw new BadRequestException('Invalid email or request');
+    }
+  }
+
+  @ApiOperation({ summary: 'Update password' })
+  @ApiCreatedResponse({ description: 'Password updated successfully', type: ResponseMessageDto })
+  @ApiBadRequestResponse({ description: 'Invalid or expired reset token' })
+  @Post('update-password')
+  async updatePassword(@Body() dto: NewPasswordDto) {
+    try {
+      await this.authService.updatePassword(dto);
+      return { message: 'Password updated successfully' };
+    } catch (error) {
+      if (error instanceof InvalidResetTokenException) {
+        throw new BadRequestException(error.message);
+      }
+      throw new BadRequestException('Invalid data');
     }
   }
 }

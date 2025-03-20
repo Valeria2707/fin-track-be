@@ -3,3 +3,4 @@ export * from './sign-up-user.dto';
 export * from './response-message.dto';
 export * from './new-password.dto';
 export * from './reset-password.dto';
+export * from './response-tokens.dto';

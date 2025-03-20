@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SignUpUserResponse } from './types/sign-up-user-response.interface';
 import * as argon2 from 'argon2';
-import { SignInUserDto, SignUpUserDto } from './dto';
+import { NewPasswordDto, SignInUserDto, SignUpUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +11,7 @@ import { EmailService } from 'src/email/email.service';
 import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
 import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
 import { UserNotFoundException } from './exceptions/user-not-found.exception';
+import { InvalidResetTokenException } from './exceptions/invalid-reset-token.exception';
 
 @Injectable()
 export class AuthService {
@@ -119,6 +120,26 @@ export class AuthService {
     const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${token}`;
 
     await this.emailService.sendPasswordResetEmail(user.email, user.name, resetLink);
+
+    return true;
+  }
+
+  async updatePassword(newPasswordDto: NewPasswordDto) {
+    const { token, newPassword } = newPasswordDto;
+
+    const user = await this.userService.findByResetToken(token);
+
+    if (!user || !user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+      throw new InvalidResetTokenException();
+    }
+
+    const hashedPassword = await this.hashData(newPassword);
+
+    await this.userService.findOneAndUpdate(user.id, {
+      password: hashedPassword,
+      resetToken: null,
+      resetTokenExpires: null,
+    });
 
     return true;
   }
