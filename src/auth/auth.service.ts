@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SignUpUserResponse } from './types/sign-up-user-response.interface';
+
 import * as argon2 from 'argon2';
 import { NewPasswordDto, SignInUserDto, SignUpUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
@@ -22,7 +22,7 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  async signUp(signUpUserDto: SignUpUserDto): Promise<SignUpUserResponse> {
+  async signUp(signUpUserDto: SignUpUserDto) {
     const { email } = signUpUserDto;
 
     const existingUser = await this.userService.findOneByEmail(email);
@@ -42,7 +42,7 @@ export class AuthService {
     return tokens;
   }
 
-  async signIn(signInUserDto: SignInUserDto): Promise<SignUpUserResponse | null> {
+  async signIn(signInUserDto: SignInUserDto) {
     const user = await this.userService.findOneByEmail(signInUserDto.email);
     if (!user) {
       throw new AuthenticationFailedException('User does not exist');

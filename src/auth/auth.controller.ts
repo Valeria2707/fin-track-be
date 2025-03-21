@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response, Request } from 'express';
 import { NewPasswordDto, ResetPasswordDto, ResponseMessageDto, ResponseTokensDto, SignInUserDto, SignUpUserDto } from './dto';
@@ -6,10 +6,6 @@ import { AccessTokenGuard } from 'src/guards/access-token.guard';
 import { RefreshTokenGuard } from 'src/guards/refresh-token.guard';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { setAuthCookies } from 'src/utils/setAuthCookies';
-import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
-import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
-import { UserNotFoundException } from './exceptions/user-not-found.exception';
-import { InvalidResetTokenException } from './exceptions/invalid-reset-token.exception';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -24,7 +20,6 @@ export class AuthController {
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Post('sign-up')
-  @Post('sign-up')
   async signup(@Body() signUpUserDto: SignUpUserDto, @Res({ passthrough: true }) res: Response) {
     try {
       const result = await this.authService.signUp(signUpUserDto);
@@ -32,10 +27,7 @@ export class AuthController {
       setAuthCookies(res, result);
 
       return result;
-    } catch (error) {
-      if (error instanceof UserAlreadyExistsException) {
-        throw new ConflictException('Email already exists');
-      }
+    } catch {
       throw new BadRequestException('Invalid data');
     }
   }
@@ -55,10 +47,7 @@ export class AuthController {
       setAuthCookies(res, result);
 
       return result;
-    } catch (error) {
-      if (error instanceof AuthenticationFailedException) {
-        throw new BadRequestException(error.message);
-      }
+    } catch {
       throw new BadRequestException('Invalid data');
     }
   }
@@ -109,12 +98,8 @@ export class AuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     try {
       await this.authService.resetPassword(dto.email);
-      return { message: 'Reset password link sent to your email' };
-    } catch (error) {
-      if (error instanceof UserNotFoundException) {
-        throw new BadRequestException(error.message);
-      }
-      throw new BadRequestException('Invalid email or request');
+    } catch {
+      throw new BadRequestException('Invalid request');
     }
   }
 
@@ -126,10 +111,7 @@ export class AuthController {
     try {
       await this.authService.updatePassword(dto);
       return { message: 'Password updated successfully' };
-    } catch (error) {
-      if (error instanceof InvalidResetTokenException) {
-        throw new BadRequestException(error.message);
-      }
+    } catch {
       throw new BadRequestException('Invalid data');
     }
   }
