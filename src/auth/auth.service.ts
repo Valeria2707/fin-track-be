@@ -12,6 +12,7 @@ import { UserAlreadyExistsException } from './exceptions/user-already-exists.exc
 import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
 import { UserNotFoundException } from './exceptions/user-not-found.exception';
 import { InvalidResetTokenException } from './exceptions/invalid-reset-token.exception';
+import { UpdateResetToken } from './types/update-reset-token';
 
 @Injectable()
 export class AuthService {
@@ -112,10 +113,12 @@ export class AuthService {
     const expiryMinutes = this.configService.get<number>('RESET_TOKEN_EXPIRY_MINUTES');
     const expiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
-    await this.userService.findOneAndUpdate(user.id, {
+    const updateData: UpdateResetToken = {
       resetToken: token,
       resetTokenExpires: expiry,
-    });
+    };
+
+    await this.userService.findOneAndUpdate(user.id, updateData);
 
     const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${token}`;
 
@@ -135,11 +138,13 @@ export class AuthService {
 
     const hashedPassword = await this.hashData(newPassword);
 
-    await this.userService.findOneAndUpdate(user.id, {
+    const updateData: UpdateResetToken = {
       password: hashedPassword,
       resetToken: null,
       resetTokenExpires: null,
-    });
+    };
+
+    await this.userService.findOneAndUpdate(user.id, updateData);
 
     return true;
   }

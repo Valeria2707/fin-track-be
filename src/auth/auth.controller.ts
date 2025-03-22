@@ -21,15 +21,11 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Post('sign-up')
   async signup(@Body() signUpUserDto: SignUpUserDto, @Res({ passthrough: true }) res: Response) {
-    try {
-      const result = await this.authService.signUp(signUpUserDto);
+    const result = await this.authService.signUp(signUpUserDto);
 
-      setAuthCookies(res, result);
+    setAuthCookies(res, result);
 
-      return result;
-    } catch {
-      throw new BadRequestException('Invalid data');
-    }
+    return result;
   }
 
   @ApiOperation({ summary: 'Sign in user' })
@@ -41,15 +37,11 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Post('sign-in')
   async signin(@Body() signInUserDto: SignInUserDto, @Res({ passthrough: true }) res: Response) {
-    try {
-      const result = await this.authService.signIn(signInUserDto);
+    const result = await this.authService.signIn(signInUserDto);
 
-      setAuthCookies(res, result);
+    setAuthCookies(res, result);
 
-      return result;
-    } catch {
-      throw new BadRequestException('Invalid data');
-    }
+    return result;
   }
 
   @ApiOperation({ summary: 'Logout user' })
@@ -96,11 +88,7 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Invalid email or bad request' })
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    try {
-      await this.authService.resetPassword(dto.email);
-    } catch {
-      throw new BadRequestException('Invalid request');
-    }
+    await this.authService.resetPassword(dto.email);
   }
 
   @ApiOperation({ summary: 'Update password' })
@@ -108,11 +96,7 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Invalid or expired reset token' })
   @Post('update-password')
   async updatePassword(@Body() dto: NewPasswordDto) {
-    try {
-      await this.authService.updatePassword(dto);
-      return { message: 'Password updated successfully' };
-    } catch {
-      throw new BadRequestException('Invalid data');
-    }
+    await this.authService.updatePassword(dto);
+    return { message: 'Password updated successfully' };
   }
 }

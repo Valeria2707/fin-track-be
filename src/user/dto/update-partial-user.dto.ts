@@ -12,12 +12,4 @@ export class UpdatePartialUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
   @IsString()
   resetToken?: string;
-
-  @ApiPropertyOptional({
-    type: String,
-    description: 'Expiry date of the reset token in ISO format.',
-    example: '2025-03-19T12:34:56.789Z',
-  })
-  @IsOptional()
-  resetTokenExpires?: Date;
 }
