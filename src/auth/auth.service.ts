@@ -8,10 +8,7 @@ import { UserService } from 'src/user/user.service';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
 import { EmailService } from 'src/email/email.service';
-import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
-import { AuthenticationFailedException } from './exceptions/authentication-failed.exception';
-import { UserNotFoundException } from './exceptions/user-not-found.exception';
-import { InvalidResetTokenException } from './exceptions/invalid-reset-token.exception';
+import { AppException } from './exceptions/app-exception';
 import { UpdateResetToken } from './types/update-reset-token';
 
 @Injectable()
@@ -28,7 +25,7 @@ export class AuthService {
 
     const existingUser = await this.userService.findOneByEmail(email);
     if (existingUser) {
-      throw new UserAlreadyExistsException();
+      throw new AppException('User already exists');
     }
 
     const id = uuidv4();
@@ -46,12 +43,12 @@ export class AuthService {
   async signIn(signInUserDto: SignInUserDto) {
     const user = await this.userService.findOneByEmail(signInUserDto.email);
     if (!user) {
-      throw new AuthenticationFailedException('User does not exist');
+      throw new AppException('User does not exist');
     }
 
     const passwordMatches = await argon2.verify(user.password, signInUserDto.password);
     if (!passwordMatches) {
-      throw new AuthenticationFailedException('Wrong password');
+      throw new AppException('Wrong password');
     }
 
     const tokens = await this.getTokens(user.id, user.email);
@@ -106,7 +103,7 @@ export class AuthService {
     const user = await this.userService.findOneByEmail(email);
 
     if (!user) {
-      throw new UserNotFoundException('User with this email does not exist');
+      throw new AppException('User with this email does not exist');
     }
 
     const token = randomBytes(32).toString('hex');
@@ -133,7 +130,7 @@ export class AuthService {
     const user = await this.userService.findByResetToken(token);
 
     if (!user || !user.resetTokenExpires || user.resetTokenExpires < new Date()) {
-      throw new InvalidResetTokenException();
+      throw new AppException('User with this email does not exist');
     }
 
     const hashedPassword = await this.hashData(newPassword);
