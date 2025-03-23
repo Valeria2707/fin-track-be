@@ -9,8 +9,8 @@ export class ResponseTransactionDto {
   id: number;
 
   @ApiProperty()
-  @IsNumber()
-  user_id: number;
+  @IsString()
+  user_id: string;
 
   @ApiProperty()
   @IsString()

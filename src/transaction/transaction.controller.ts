@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, Put, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Put, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateTransactionDto, ResponseRemoveTransactionDto, ResponseTransactionDto, UpdateTransactionDto } from './dto';
 import { AccessTokenGuard } from 'src/guards/access-token.guard';
+import { Request } from 'express';
 
 @UseGuards(AccessTokenGuard)
 @ApiTags('Transaction')
@@ -14,18 +15,21 @@ export class TransactionController {
   @ApiCreatedResponse({ description: 'Created Successfully', type: ResponseTransactionDto })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Post()
-  async create(@Body() createTransactionDto: CreateTransactionDto) {
-    return await this.transactionService.create(createTransactionDto);
+  async create(@Body() createTransactionDto: CreateTransactionDto, @Req() req: Request) {
+    const userId = req.user['sub'];
+    return await this.transactionService.create(createTransactionDto, userId);
   }
 
   @ApiOperation({ summary: 'Get all transactions.' })
   @ApiCreatedResponse({ description: 'Created Successfully', type: ResponseTransactionDto, isArray: true })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Get()
-  async findAll(@Query() query: { [key: string]: string | undefined }) {
+  async findAll(@Query() query: { [key: string]: string | undefined }, @Req() req: Request) {
     const { type, category_id, fromDate, toDate, page = '1', limit = '10' } = query;
+    const userId = req.user['sub'];
 
     return await this.transactionService.findAll(
+      userId,
       type,
       category_id ? Number(category_id) : undefined,
       fromDate ? new Date(fromDate) : undefined,

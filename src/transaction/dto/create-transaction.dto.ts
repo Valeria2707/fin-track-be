@@ -7,9 +7,6 @@ export class CreateTransactionDto {
     description: 'ID of the user who created the transaction',
     example: 1,
   })
-  @IsNumber()
-  user_id: number;
-
   @ApiProperty({
     type: String,
     description: 'Type of transaction (e.g., income, expense)',
