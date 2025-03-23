@@ -12,14 +12,14 @@ export function setAuthCookies(res: Response, tokens: Tokens) {
   res.cookie('accessToken', tokens.accessToken, {
     httpOnly: true,
     secure: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: FIFTEEN_MINUTES,
   });
 
   res.cookie('refreshToken', tokens.refreshtoken, {
     httpOnly: true,
     secure: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: SEVEN_DAYS,
   });
 }
