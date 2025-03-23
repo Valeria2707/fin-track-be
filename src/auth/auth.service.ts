@@ -117,7 +117,7 @@ export class AuthService {
 
     await this.userService.update(user.id, updateData);
 
-    const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${token}`;
+    const resetLink = `${process.env.CORS_ORIGIN}/auth/reset-password?token=${token}`;
 
     await this.emailService.sendPasswordResetEmail(user.email, user.name, resetLink);
 
