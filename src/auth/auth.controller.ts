@@ -51,7 +51,6 @@ export class AuthController {
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @UseGuards(AccessTokenGuard)
   @Post('logout')
   @UseGuards(AccessTokenGuard)
   async logout(@Res({ passthrough: true }) res: Response) {
@@ -69,6 +68,7 @@ export class AuthController {
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
+  @UseGuards(AccessTokenGuard)
   async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.refreshToken;
 
