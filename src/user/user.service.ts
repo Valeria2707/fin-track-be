@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdatePartialUserDto } from './dto/update-partial-user.dto';
 import { User } from './entity/user';
 import * as argon2 from 'argon2';
 
@@ -21,7 +20,7 @@ export class UserService {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  async findOneAndUpdate(id: string, updateBody: UpdatePartialUserDto): Promise<User | null> {
+  async update(id: string, updateBody: Partial<User>): Promise<User | null> {
     await this.userRepository.update(id, updateBody);
     return this.userRepository.findOne({ where: { id } });
   }

@@ -118,7 +118,7 @@ export class AuthService {
       resetTokenExpires: expiry,
     };
 
-    await this.userService.findOneAndUpdate(user.id, updateData);
+    await this.userService.update(user.id, updateData);
 
     const resetLink = `${process.env.CORS_ORIGIN}/reset-password?token=${token}`;
 
@@ -144,7 +144,7 @@ export class AuthService {
       resetTokenExpires: null,
     };
 
-    await this.userService.findOneAndUpdate(user.id, updateData);
+    await this.userService.update(user.id, updateData);
 
     return true;
   }
