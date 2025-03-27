@@ -1,11 +1,15 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ISignUpUserResponse } from './interface/sign-up-user-response.interface';
+
 import * as argon2 from 'argon2';
-import { SignInUserDto, SignUpUserDto } from './dto';
+import { NewPasswordDto, SignInUserDto, SignUpUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
+import { EmailService } from 'src/email/email.service';
+import { AppException } from './exceptions/app-exception';
+import { UpdateResetToken } from './types/update-reset-token';
 
 @Injectable()
 export class AuthService {
@@ -13,57 +17,47 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    private readonly emailService: EmailService,
   ) {}
 
-  async signUp(signUpUserDto: SignUpUserDto): Promise<ISignUpUserResponse> {
-    const { email, password } = signUpUserDto;
+  async signUp(signUpUserDto: SignUpUserDto) {
+    const { email } = signUpUserDto;
 
     const existingUser = await this.userService.findOneByEmail(email);
     if (existingUser) {
-      throw new BadRequestException('User already exists');
+      throw new AppException('User already exists');
     }
-
-    const hash = await this.hashData(password);
 
     const id = uuidv4();
 
     const newUser = await this.userService.create({
       id,
       ...signUpUserDto,
-      password: hash,
     });
 
     const tokens = await this.getTokens(newUser.id, newUser.email);
-
-    await this.updateRefreshToken(newUser.id, tokens.refreshtoken);
 
     return tokens;
   }
 
   async signIn(signInUserDto: SignInUserDto) {
     const user = await this.userService.findOneByEmail(signInUserDto.email);
-    if (!user) throw new BadRequestException('User does not exist');
-    const passwordMatches = await argon2.verify(user.password, signInUserDto.password);
-    if (!passwordMatches) throw new BadRequestException('Password is incorrect');
-    const tokens = await this.getTokens(user.id, user.email);
-    await this.updateRefreshToken(user.id, tokens.refreshtoken);
-    return tokens;
-  }
+    if (!user) {
+      throw new AppException('User does not exist');
+    }
 
-  async logout(userId: string) {
-    return this.userService.findOneAndUpdate(userId, { refreshtoken: null });
+    const passwordMatches = await argon2.verify(user.password, signInUserDto.password);
+    if (!passwordMatches) {
+      throw new AppException('Wrong password');
+    }
+
+    const tokens = await this.getTokens(user.id, user.email);
+
+    return tokens;
   }
 
   hashData(data: string) {
     return argon2.hash(data);
-  }
-
-  async updateRefreshToken(userId: string, refreshtoken: string) {
-    const hashedRefreshToken = await this.hashData(refreshtoken);
-
-    this.userService.findOneAndUpdate(userId, {
-      refreshtoken: hashedRefreshToken,
-    });
   }
 
   async getTokens(userId: string, email: string) {
@@ -96,19 +90,59 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(userId: string, refreshtoken: string) {
-    const user = await this.userService.findOne(userId);
+  async refreshTokens(refreshtoken: string) {
+    const payload = await this.jwtService.verifyAsync(refreshtoken, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+    });
 
-    const refreshTokenMatches = await argon2.verify(user.refreshtoken, refreshtoken);
+    const tokens = await this.getTokens(payload.sub, payload.email);
+    return tokens;
+  }
 
-    if (!refreshTokenMatches) {
-      throw new ForbiddenException('Access Denied');
+  async resetPassword(email: string) {
+    const user = await this.userService.findOneByEmail(email);
+
+    if (!user) {
+      throw new AppException('User with this email does not exist');
     }
 
-    const tokens = await this.getTokens(user.id, user.email);
+    const token = randomBytes(32).toString('hex');
+    const expiryMinutes = this.configService.get<number>('RESET_TOKEN_EXPIRY_MINUTES');
+    const expiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
-    await this.updateRefreshToken(user.id, tokens.refreshtoken);
+    const updateData: UpdateResetToken = {
+      resetToken: token,
+      resetTokenExpires: expiry,
+    };
 
-    return tokens;
+    await this.userService.update(user.id, updateData);
+
+    const resetLink = `${process.env.CORS_ORIGIN}/auth/reset-password?token=${token}`;
+
+    await this.emailService.sendPasswordResetEmail(user.email, user.name, resetLink);
+
+    return true;
+  }
+
+  async updatePassword(newPasswordDto: NewPasswordDto) {
+    const { token, newPassword } = newPasswordDto;
+
+    const user = await this.userService.findByResetToken(token);
+
+    if (!user || !user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+      throw new AppException('User with this email does not exist');
+    }
+
+    const hashedPassword = await this.hashData(newPassword);
+
+    const updateData: UpdateResetToken = {
+      password: hashedPassword,
+      resetToken: null,
+      resetTokenExpires: null,
+    };
+
+    await this.userService.update(user.id, updateData);
+
+    return true;
   }
 }

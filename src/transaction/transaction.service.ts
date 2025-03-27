@@ -12,9 +12,10 @@ export class TransactionService {
     private readonly transactionRepository: Repository<Transaction>,
   ) {}
 
-  async create(createTransactionDto: CreateTransactionDto): Promise<Transaction> {
+  async create(createTransactionDto: CreateTransactionDto, userId: string): Promise<Transaction> {
     const transaction = this.transactionRepository.create({
       ...createTransactionDto,
+      user_id: userId,
       category: { id: createTransactionDto.category_id },
     });
 
@@ -22,6 +23,7 @@ export class TransactionService {
   }
 
   async findAll(
+    userId: string,
     type?: string,
     category_id?: number,
     fromDate?: Date,
@@ -29,7 +31,10 @@ export class TransactionService {
     page: number = 1,
     limit: number = 10,
   ): Promise<{ data: Transaction[]; total: number; page: number; limit: number }> {
-    const queryBuilder = this.transactionRepository.createQueryBuilder('transaction').leftJoinAndSelect('transaction.category', 'category');
+    const queryBuilder = this.transactionRepository
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.category', 'category')
+      .where('transaction.user_id = :userId', { userId });
 
     if (type) {
       queryBuilder.andWhere('transaction.type = :type', { type });

@@ -1,8 +1,10 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException, UseGuards } from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ResponseGetCategoryDto } from './dto/response-get-category.dto';
+import { AccessTokenGuard } from 'src/guards/access-token.guard';
 
+@UseGuards(AccessTokenGuard)
 @ApiTags('Category')
 @Controller('category')
 export class CategoryController {

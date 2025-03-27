@@ -6,16 +6,13 @@ import { ConfigModule } from '@nestjs/config';
 import { Module } from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
-import { DatabaseModule } from 'src/database/database.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from 'src/user/entity/user';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
-  imports: [JwtModule.register({}), DatabaseModule, ConfigModule],
+  imports: [JwtModule.register({}), TypeOrmModule.forFeature([User]), ConfigModule],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    AccessTokenStrategy,
-    RefreshTokenStrategy,
-    UserService,
-  ],
+  providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy, UserService, EmailService],
 })
 export class AuthModule {}

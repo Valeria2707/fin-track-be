@@ -1,5 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsPassword } from 'src/shared/decorators/password';
 
 export class CreateUserDto {
   @IsOptional()
@@ -8,41 +9,25 @@ export class CreateUserDto {
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'Name of the user.',
     example: 'John',
   })
-  @IsString()
+  @IsString({ message: 'Name must be a string' })
   name: string;
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'User’s email address.',
     example: 'John@mail.com',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
   @ApiProperty({
     type: String,
-    description: 'This is a required property',
+    description: 'User’s password.',
     example: 'StrongPassword123',
   })
-  @IsString()
+  @IsPassword()
   password: string;
-
-  @ApiPropertyOptional({
-    type: String,
-    description: 'This is a optional property',
-    example: 'eyJhbGciOiJIUzI1NiIsInR...',
-  })
-  @IsOptional()
-  accessToken?: string;
-
-  @ApiPropertyOptional({
-    type: String,
-    description: 'This is a optional property',
-    example: 'eyJhbGciOiJIUzI1NiIsInR...',
-  })
-  @IsOptional()
-  refreshtoken?: string;
 }

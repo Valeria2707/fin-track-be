@@ -21,12 +21,12 @@ export class ResponseGetUserDto {
   @ApiProperty()
   @IsString()
   @IsOptional()
-  accessToken?: string;
+  resetToken?: string;
 
   @ApiProperty()
-  @IsString()
   @IsOptional()
-  refreshToken?: string;
+  @IsDate()
+  resetTokenExpires?: Date;
 
   @ApiProperty()
   @IsDate()

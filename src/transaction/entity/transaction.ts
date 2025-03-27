@@ -7,7 +7,7 @@ export class Transaction {
   id: number;
 
   @Column()
-  user_id: number;
+  user_id: string;
 
   @Column()
   type: string;
