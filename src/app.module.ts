@@ -26,7 +26,7 @@ import { EmailService } from './email/email.service';
     // AiQueriesModule,
     // ReportModule,
     // AnalyticsModule,
-    // GoalModule,
+    GoalModule,
   ],
   controllers: [AppController],
   providers: [AppService, EmailService],

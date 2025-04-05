@@ -1,16 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { Status } from '../enum/status.enum';
+import { Priority } from '../enum/goal';
 
 export class CreateGoalDto {
   @ApiProperty({
-    type: Number,
+    type: String,
     description: 'The ID of the user who owns the goal.',
     example: 1,
   })
-  @IsNumber()
-  user_id: number;
+  @IsString()
+  @IsOptional()
+  user_id?: string;
 
   @ApiProperty({
     type: String,
@@ -47,6 +48,14 @@ export class CreateGoalDto {
   @Type(() => Date)
   deadline: Date;
 
+  @ApiProperty({
+    enum: Priority,
+    description: 'The priority level of the goal (low, medium, high).',
+    example: Priority.HIGH,
+  })
+  @IsEnum(Priority)
+  priority: Priority;
+
   @ApiPropertyOptional({
     type: String,
     description: 'A detailed description of the financial goal.',
@@ -55,12 +64,4 @@ export class CreateGoalDto {
   @IsString()
   @IsOptional()
   description?: string;
-
-  @ApiProperty({
-    enum: Status,
-    description: 'The current status of the goal. Must be one of: in-progress, completed, or cancelled. Optional field.',
-    example: 'in-progress',
-  })
-  @IsEnum(Status, { message: 'Status must be one of: in-progress, completed, cancelled' })
-  status: Status;
 }

@@ -1,86 +1,116 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { Client } from 'pg';
-import { IGoal } from './interface/goal';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
+import { Goal } from './entity/goal';
+import { buildComparisonMatrix, computeAHPMetrics, getDeadlineLabel, getTargetAmountLabel } from './helpers/goal';
+import { AHP_CR_THRESHOLD, criteriaComparisonMatrix } from './constants/goal';
+import { TransactionService } from 'src/transaction/transaction.service';
+import { DEADLINE_WEIGHTS, PRIORITY_WEIGHTS, TARGET_AMOUNT_WEIGHTS } from './enum/goal';
 
 @Injectable()
 export class GoalService {
-  constructor(@Inject('PG_CLIENT') private readonly client: Client) {}
+  constructor(
+    @InjectRepository(Goal)
+    private readonly goalRepository: Repository<Goal>,
+    private readonly transactionService: TransactionService,
+  ) {}
 
-  async addGoal(goalData: CreateGoalDto): Promise<IGoal> {
-    const query = `
-      INSERT INTO goals (user_id, title, target_amount, current_amount, deadline, description, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *;
-    `;
-    const values = [
-      goalData.user_id,
-      goalData.title,
-      goalData.target_amount,
-      goalData.current_amount || 0,
-      goalData.deadline,
-      goalData.description,
-      goalData.status || 'in-progress',
-    ];
-    const result = await this.client.query(query, values);
-    return result.rows[0];
+  async addGoal(goalData: CreateGoalDto): Promise<Goal> {
+    const goal = this.goalRepository.create(goalData);
+    return this.goalRepository.save(goal);
   }
 
-  async getAllGoals(userId: string): Promise<IGoal[]> {
-    const query = 'SELECT * FROM goals WHERE user_id = $1';
-    const result = await this.client.query(query, [userId]);
-    return result.rows;
+  async getAllGoals(userId: string): Promise<Goal[]> {
+    return this.goalRepository.find({ where: { user_id: userId } });
   }
 
-  async getGoalById(id: number): Promise<IGoal> {
-    const query = 'SELECT * FROM goals WHERE id = $1';
-    const result = await this.client.query(query, [id]);
-    if (result.rows.length === 0) {
-      throw new NotFoundException(`Goal with ID ${id} not found`);
-    }
-    return result.rows[0];
+  async getGoalById(id: number): Promise<Goal> {
+    return this.goalRepository.findOne({ where: { id } });
   }
 
-  async updateGoal(id: number, updates: UpdateGoalDto): Promise<IGoal> {
-    const query = `
-      UPDATE goals
-      SET title = COALESCE($2, title),
-          target_amount = COALESCE($3, target_amount),
-          current_amount = COALESCE($4, current_amount),
-          deadline = COALESCE($5, deadline),
-          description = COALESCE($6, description),
-          status = COALESCE($7, status)
-      WHERE id = $1
-      RETURNING *;
-    `;
-    const values = [
-      id,
-      updates.title,
-      updates.target_amount,
-      updates.current_amount,
-      updates.deadline,
-      updates.description,
-      updates.status,
-    ];
-    const result = await this.client.query(query, values);
-    if (result.rows.length === 0) {
-      throw new NotFoundException(`Goal with ID ${id} not found`);
-    }
-    return result.rows[0];
-  }
-
-  async removeGoal(id: number): Promise<void> {
-    const query = 'DELETE FROM goals WHERE id = $1';
-    const result = await this.client.query(query, [id]);
-    if (result.rowCount === 0) {
-      throw new NotFoundException(`Goal with ID ${id} not found`);
-    }
-  }
-
-  async calculateGoalProgress(id: number): Promise<{ progress: number }> {
+  async updateGoal(id: number, updates: UpdateGoalDto): Promise<Goal | null> {
     const goal = await this.getGoalById(id);
-    const progress = (goal.current_amount / goal.target_amount) * 100;
-    return { progress: Math.min(progress, 100) };
+    if (!goal) return null;
+
+    const updatedGoal = this.goalRepository.merge(goal, updates);
+    return this.goalRepository.save(updatedGoal);
+  }
+
+  async removeGoal(id: number): Promise<boolean> {
+    const result = await this.goalRepository.delete(id);
+    return result.affected !== 0;
+  }
+
+  async getComparisonMatrices(userId: string) {
+    const goals = await this.getAllGoals(userId);
+
+    const deadlines = goals.map(goal => getDeadlineLabel(new Date(goal.deadline)));
+    const targetAmounts = goals.map(goal => getTargetAmountLabel(goal.target_amount));
+    const priorities = goals.map(goal => goal.priority);
+
+    const deadlineMatrix = buildComparisonMatrix(deadlines, DEADLINE_WEIGHTS);
+    const targetAmountMatrix = buildComparisonMatrix(targetAmounts, TARGET_AMOUNT_WEIGHTS);
+    const priorityMatrix = buildComparisonMatrix(priorities, PRIORITY_WEIGHTS);
+
+    return {
+      priorityMatrix,
+      targetAmountMatrix,
+      deadlineMatrix,
+    };
+  }
+
+  async getAllWeights(userId: string) {
+    const { deadlineMatrix, targetAmountMatrix, priorityMatrix } = await this.getComparisonMatrices(userId);
+
+    const priorityAHP = computeAHPMetrics(priorityMatrix);
+    const targetAmountAHP = computeAHPMetrics(targetAmountMatrix);
+    const deadlineAHP = computeAHPMetrics(deadlineMatrix);
+    const criteriaAHP = computeAHPMetrics(criteriaComparisonMatrix);
+
+    const allCR = [priorityAHP.CR, targetAmountAHP.CR, deadlineAHP.CR, criteriaAHP.CR];
+
+    const isConsistent = allCR.every(cr => cr <= AHP_CR_THRESHOLD);
+    if (!isConsistent) {
+      return {
+        message: `Some matrices have CR > ${AHP_CR_THRESHOLD} (too inconsistent). Please adjust the comparisons.`,
+        priority: priorityAHP,
+        targetAmount: targetAmountAHP,
+        deadline: deadlineAHP,
+        criteria: criteriaAHP,
+      };
+    }
+
+    const [w1, w2, w3] = criteriaAHP.weights;
+    const [p1, p2, p3] = [priorityAHP.weights, targetAmountAHP.weights, deadlineAHP.weights];
+
+    const globalGoalWeights = p1.map((_, i) => w1 * p1[i] + w2 * p2[i] + w3 * p3[i]);
+
+    return {
+      priority: priorityAHP,
+      targetAmount: targetAmountAHP,
+      deadline: deadlineAHP,
+      criteria: criteriaAHP,
+      globalGoalWeights,
+    };
+  }
+
+  async getGoalsWithRecommendedSum(userId: string) {
+    const goals = await this.getAllGoals(userId);
+    const { globalGoalWeights } = await this.getAllWeights(userId);
+
+    if (!globalGoalWeights) return [];
+
+    const leftover = await this.transactionService.getMonthlyLeftover(userId);
+
+    const shouldZeroOut = leftover <= 0;
+
+    return goals
+      .map((goal, i) => ({
+        goal,
+        recommendedSum: shouldZeroOut ? 0 : +(globalGoalWeights[i] * leftover).toFixed(2),
+      }))
+      .sort((a, b) => b.recommendedSum - a.recommendedSum);
   }
 }
