@@ -23,7 +23,10 @@ export class GoalService {
   }
 
   async getAllGoals(userId: string): Promise<Goal[]> {
-    return this.goalRepository.find({ where: { user_id: userId } });
+    return this.goalRepository.find({
+      where: { user_id: userId },
+      order: { deadline: 'ASC' },
+    });
   }
 
   async getGoalById(id: number): Promise<Goal> {

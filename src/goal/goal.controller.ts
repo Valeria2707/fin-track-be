@@ -4,6 +4,7 @@ import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from
 import { CreateGoalDto, ResponseGoalDto, ResponseOrderGoalDto, ResponseRemoveGoalDto, UpdateGoalDto } from './dto';
 import { Request } from 'express';
 import { AccessTokenGuard } from 'src/guards/access-token.guard';
+import { GoalOwnershipGuard } from 'src/guards/goal-ownership.guard';
 @UseGuards(AccessTokenGuard)
 @ApiTags('Goals')
 @Controller('goals')
@@ -54,6 +55,7 @@ export class GoalController {
     type: ResponseGoalDto,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
+  @UseGuards(GoalOwnershipGuard)
   @Get(':id')
   async getGoalById(@Param('id') id: number) {
     const goal = await this.goalsService.getGoalById(id);
@@ -69,6 +71,7 @@ export class GoalController {
     type: ResponseGoalDto,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
+  @UseGuards(GoalOwnershipGuard)
   @Put(':id')
   async updateGoal(@Param('id') id: number, @Body() updates: UpdateGoalDto) {
     const updatedGoal = await this.goalsService.updateGoal(id, updates);
@@ -84,6 +87,7 @@ export class GoalController {
     type: ResponseRemoveGoalDto,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
+  @UseGuards(GoalOwnershipGuard)
   @Delete(':id')
   async removeGoal(@Param('id') id: number) {
     const isDeleted = await this.goalsService.removeGoal(id);
