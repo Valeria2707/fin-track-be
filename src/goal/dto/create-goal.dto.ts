@@ -6,15 +6,6 @@ import { Priority } from '../enum/goal';
 export class CreateGoalDto {
   @ApiProperty({
     type: String,
-    description: 'The ID of the user who owns the goal.',
-    example: 1,
-  })
-  @IsString()
-  @IsOptional()
-  user_id?: string;
-
-  @ApiProperty({
-    type: String,
     description: 'The title of the financial goal.',
     example: 'Save for a vacation',
   })

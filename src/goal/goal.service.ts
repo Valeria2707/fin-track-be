@@ -17,8 +17,8 @@ export class GoalService {
     private readonly transactionService: TransactionService,
   ) {}
 
-  async addGoal(goalData: CreateGoalDto): Promise<Goal> {
-    const goal = this.goalRepository.create(goalData);
+  async addGoal(goalData: CreateGoalDto, userId: string): Promise<Goal> {
+    const goal = this.goalRepository.create({ ...goalData, user_id: userId });
     return this.goalRepository.save(goal);
   }
 
@@ -85,10 +85,12 @@ export class GoalService {
       };
     }
 
-    const [w1, w2, w3] = criteriaAHP.weights;
-    const [p1, p2, p3] = [priorityAHP.weights, targetAmountAHP.weights, deadlineAHP.weights];
+    const [priorityWeight, targetAmountWeight, deadlineWeight] = criteriaAHP.weights;
+    const [priorityWeights, targetAmountWeights, deadlineWeights] = [priorityAHP.weights, targetAmountAHP.weights, deadlineAHP.weights];
 
-    const globalGoalWeights = p1.map((_, i) => w1 * p1[i] + w2 * p2[i] + w3 * p3[i]);
+    const globalGoalWeights = priorityWeights.map(
+      (_, i) => priorityWeight * priorityWeights[i] + targetAmountWeight * targetAmountWeights[i] + deadlineWeight * deadlineWeights[i],
+    );
 
     return {
       priority: priorityAHP,

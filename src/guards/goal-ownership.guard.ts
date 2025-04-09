@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { GoalService } from 'src/goal/goal.service';
 
 @Injectable()
@@ -11,17 +11,13 @@ export class GoalOwnershipGuard implements CanActivate {
     const goalId = Number(request.params.id);
 
     if (!goalId || !userId) {
-      throw new ForbiddenException('Invalid goal or user.');
+      return false;
     }
 
     const goal = await this.goalService.getGoalById(goalId);
 
-    if (!goal) {
-      throw new NotFoundException(`Goal with ID ${goalId} not found`);
-    }
-
-    if (goal.user_id !== userId) {
-      throw new ForbiddenException(`You do not have access to this goal`);
+    if (!goal || goal.user_id !== userId) {
+      return false;
     }
 
     return true;

@@ -5,6 +5,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction } from './entity/transaction';
 import { getCurrentMonthRange } from 'src/utils/date';
+import { TransactionType } from './type/transaction';
 
 @Injectable()
 export class TransactionService {
@@ -100,7 +101,7 @@ export class TransactionService {
 
     return transactions.data.reduce((total, t) => {
       const amount = Number(t.amount);
-      return t.type === 'income' ? total + amount : total - amount;
+      return t.type === TransactionType.Income ? total + amount : total - amount;
     }, 0);
   }
 }

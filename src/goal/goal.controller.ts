@@ -20,7 +20,7 @@ export class GoalController {
   @Post()
   async addGoal(@Body() goalData: CreateGoalDto, @Req() req: Request) {
     const userId = req.user['sub'];
-    return this.goalsService.addGoal({ ...goalData, user_id: userId });
+    return this.goalsService.addGoal(goalData, userId);
   }
 
   @ApiOperation({ summary: 'Get all goals for logged-in user.' })
