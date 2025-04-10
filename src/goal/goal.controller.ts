@@ -43,7 +43,7 @@ export class GoalController {
     isArray: true,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get('order-by-weight')
+  @Get('recommended-plan')
   async getGoalsOrderByGlobalWeight(@Req() req: Request) {
     const userId = req.user['sub'];
     return this.goalsService.getGoalsWithRecommendedSum(userId);
