@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction } from './entity/transaction';
+import { getCurrentMonthRange } from 'src/utils/date';
+import { TransactionType } from './type/transaction';
 
 @Injectable()
 export class TransactionService {
@@ -90,5 +92,16 @@ export class TransactionService {
   async remove(id: number): Promise<boolean> {
     const result = await this.transactionRepository.delete(id);
     return result.affected !== 0;
+  }
+
+  async getMonthlyLeftover(userId: string): Promise<number> {
+    const { fromDate, toDate } = getCurrentMonthRange();
+
+    const transactions = await this.findAll(userId, undefined, undefined, fromDate, toDate, 1, 9999);
+
+    return transactions.data.reduce((total, t) => {
+      const amount = Number(t.amount);
+      return t.type === TransactionType.Income ? total + amount : total - amount;
+    }, 0);
   }
 }

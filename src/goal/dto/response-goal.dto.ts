@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsNumber, IsString } from 'class-validator';
+import { Priority } from '../enum/goal';
 
 export class ResponseGoalDto {
   @ApiProperty()
@@ -8,8 +9,8 @@ export class ResponseGoalDto {
   id: number;
 
   @ApiProperty()
-  @IsNumber()
-  user_id: number;
+  @IsString()
+  user_id: string;
 
   @ApiProperty()
   @IsString()
@@ -33,6 +34,6 @@ export class ResponseGoalDto {
   description: string;
 
   @ApiProperty()
-  @IsEnum(['in-progress', 'completed', 'cancelled'])
-  status: 'in-progress' | 'completed' | 'cancelled';
+  @IsEnum(Priority)
+  priority: Priority;
 }
