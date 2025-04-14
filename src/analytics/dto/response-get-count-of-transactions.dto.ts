@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber } from 'class-validator';
 
-export class ResponseGetIncomeVsExpensesDto {
+export class ResponseGetCountOfTransactionsDto {
   @ApiProperty()
   @IsNumber()
   income: number;
@@ -9,8 +9,4 @@ export class ResponseGetIncomeVsExpensesDto {
   @ApiProperty()
   @IsNumber()
   expenses: number;
-
-  @ApiProperty()
-  @IsNumber()
-  balance: number;
 }
