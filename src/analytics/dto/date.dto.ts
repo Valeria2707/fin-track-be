@@ -1,12 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsDate, IsOptional } from 'class-validator';
 
 export class DateQueryDto {
   @ApiProperty()
-  @IsDateString()
-  from: string;
+  @IsOptional()
+  @IsDate()
+  @Transform(({ value }) => (value ? new Date(value) : undefined))
+  from?: Date;
 
   @ApiProperty()
-  @IsDateString()
-  to: string;
+  @IsOptional()
+  @IsDate()
+  @Transform(({ value }) => (value ? new Date(value) : undefined))
+  to?: Date;
 }

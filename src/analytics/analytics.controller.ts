@@ -23,10 +23,8 @@ export class AnalyticsController {
   async getExpensesByCategory(@Req() req: Request, @Query() query: DateQueryDto) {
     const userId = req.user['sub'];
     const { from, to } = query;
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
 
-    return this.analyticsService.getCategoryAnalytics(userId, fromDate, toDate);
+    return this.analyticsService.getCategoryAnalytics(userId, from, to);
   }
   @ApiOperation({ summary: 'Get income vs expenses.' })
   @ApiCreatedResponse({
@@ -39,10 +37,8 @@ export class AnalyticsController {
   async getIncomeVsExpenses(@Req() req: Request, @Query() query: DateQueryDto) {
     const userId = req.user['sub'];
     const { from, to } = query;
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
 
-    return this.analyticsService.getIncomeVsExpenses(userId, fromDate, toDate);
+    return this.analyticsService.getIncomeVsExpenses(userId, from, to);
   }
 
   @ApiOperation({ summary: 'Get count of transactions.' })
@@ -56,10 +52,7 @@ export class AnalyticsController {
   async getCountOfTransactions(@Req() req: Request, @Query() query: DateQueryDto) {
     const userId = req.user['sub'];
     const { from, to } = query;
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-
-    return this.analyticsService.getCountOfTransactions(userId, fromDate, toDate);
+    return this.analyticsService.getCountOfTransactions(userId, from, to);
   }
 
   @ApiOperation({ summary: 'Get daily trend.' })
@@ -73,9 +66,7 @@ export class AnalyticsController {
   async getDailyTrend(@Req() req: Request, @Query() query: DateQueryDto) {
     const userId = req.user['sub'];
     const { from, to } = query;
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
 
-    return this.analyticsService.getDailyTrend(userId, fromDate, toDate);
+    return this.analyticsService.getDailyTrend(userId, from, to);
   }
 }
