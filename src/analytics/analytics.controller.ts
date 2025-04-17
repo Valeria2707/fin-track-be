@@ -1,8 +1,12 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ResponseGetExpensesByCategoryDto, ResponseGetIncomeVsExpensesDto, ResponseGetMonthlyAnalyticsDto } from './dto';
+import { ResponseDailyTransactionsDto, ResponseGetCountOfTransactionsDto, ResponseGetExpensesByCategoryDto, ResponseGetIncomeVsExpensesDto } from './dto';
+import { Request } from 'express';
+import { AccessTokenGuard } from 'src/guards/access-token.guard';
+import { DateQueryDto } from './dto/date.dto';
 
+@UseGuards(AccessTokenGuard)
 @ApiTags('Analytics')
 @Controller('analytics')
 export class AnalyticsController {
@@ -15,11 +19,13 @@ export class AnalyticsController {
     isArray: true,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get(':userId/expenses-by-category/')
-  async getExpensesByCategory(@Param('userId') userId: string) {
-    return this.analyticsService.getExpensesByCategory(userId);
-  }
+  @Get('/expenses-by-category')
+  async getExpensesByCategory(@Req() req: Request, @Query() query: DateQueryDto) {
+    const userId = req.user['sub'];
+    const { from, to } = query;
 
+    return this.analyticsService.getCategoryAnalytics(userId, from, to);
+  }
   @ApiOperation({ summary: 'Get income vs expenses.' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
@@ -27,24 +33,40 @@ export class AnalyticsController {
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get(':userId/income-vs-expenses')
-  async getIncomeVsExpenses(@Param('userId') userId: string) {
-    return this.analyticsService.getIncomeVsExpenses(userId);
+  @Get('/income-vs-expenses')
+  async getIncomeVsExpenses(@Req() req: Request, @Query() query: DateQueryDto) {
+    const userId = req.user['sub'];
+    const { from, to } = query;
+
+    return this.analyticsService.getIncomeVsExpenses(userId, from, to);
   }
 
-  @ApiOperation({ summary: 'Get monthly analytics.' })
+  @ApiOperation({ summary: 'Get count of transactions.' })
   @ApiCreatedResponse({
     description: 'Created Succesfully',
-    type: ResponseGetMonthlyAnalyticsDto,
+    type: ResponseGetCountOfTransactionsDto,
+    isArray: false,
+  })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @Get('/count-of-transactions')
+  async getCountOfTransactions(@Req() req: Request, @Query() query: DateQueryDto) {
+    const userId = req.user['sub'];
+    const { from, to } = query;
+    return this.analyticsService.getCountOfTransactions(userId, from, to);
+  }
+
+  @ApiOperation({ summary: 'Get daily trend.' })
+  @ApiCreatedResponse({
+    description: 'Created Succesfully',
+    type: ResponseDailyTransactionsDto,
     isArray: true,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Get(':userId/monthly')
-  async getMonthlyAnalytics(@Param('userId') userId: string, @Query('year') year: string) {
-    const yearNumber = parseInt(year, 10);
-    if (isNaN(yearNumber)) {
-      throw new Error('Invalid year format');
-    }
-    return this.analyticsService.getMonthlyAnalytics(userId, yearNumber);
+  @Get('/daily-trend')
+  async getDailyTrend(@Req() req: Request, @Query() query: DateQueryDto) {
+    const userId = req.user['sub'];
+    const { from, to } = query;
+
+    return this.analyticsService.getDailyTrend(userId, from, to);
   }
 }

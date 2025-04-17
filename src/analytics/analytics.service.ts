@@ -1,50 +1,92 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { Client } from 'pg';
-import { ResponseGetExpensesByCategoryDto, ResponseGetIncomeVsExpensesDto, ResponseGetMonthlyAnalyticsDto } from './dto';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+import { ResponseDailyTransactionsDto, ResponseGetCountOfTransactionsDto, ResponseGetExpensesByCategoryDto, ResponseGetIncomeVsExpensesDto } from './dto';
+import { Transaction } from 'src/transaction/entity/transaction';
+import { Category } from 'src/category/entity/category';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(@Inject('PG_CLIENT') private readonly client: Client) {}
+  constructor(
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
 
-  async getExpensesByCategory(userId: string): Promise<ResponseGetExpensesByCategoryDto[]> {
-    const query = `
-      SELECT c.name AS category, COALESCE(SUM(t.amount), 0) AS total
-      FROM categories c
-      LEFT JOIN transactions t ON t.category_id = c.id AND t.user_id = $1 AND t.type = 'expense'
-      GROUP BY c.name
-      ORDER BY total DESC;
-    `;
-    const result = await this.client.query(query, [userId]);
-    return result.rows.map(row => ({
+    @InjectRepository(Category)
+    private readonly categoryRepo: Repository<Category>,
+  ) {}
+
+  async getCategoryAnalytics(userId: string, from: Date, to: Date): Promise<ResponseGetExpensesByCategoryDto[]> {
+    const results = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .leftJoin('transaction.category', 'category')
+      .select(['category.name AS category', 'transaction.type AS type', 'SUM(transaction.amount) AS amount'])
+      .where('transaction.user_id = :userId AND transaction.date BETWEEN :from AND :to', {
+        userId,
+        from,
+        to,
+      })
+      .groupBy('category.name, transaction.type')
+      .orderBy('amount', 'DESC')
+      .getRawMany();
+
+    return results.map(row => ({
       category: row.category,
-      total: parseFloat(row.total) || 0,
+      type: row.type,
+      amount: parseFloat(row.amount),
     }));
   }
 
-  async getIncomeVsExpenses(userId: string): Promise<ResponseGetIncomeVsExpensesDto> {
-    const query = `
-      SELECT 
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expenses
-      FROM transactions
-      WHERE user_id = $1;
-    `;
-    const result = await this.client.query(query, [userId]);
-    return result.rows[0];
+  async getIncomeVsExpenses(userId: string, from: Date, to: Date): Promise<ResponseGetIncomeVsExpensesDto> {
+    const result = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select([
+        `SUM(CASE WHEN transaction.type = 'income' THEN transaction.amount ELSE 0 END) AS income`,
+        `SUM(CASE WHEN transaction.type = 'expense' THEN transaction.amount ELSE 0 END) AS expenses`,
+      ])
+      .where('transaction.user_id = :userId', { userId })
+      .andWhere('transaction.date BETWEEN :from AND :to', { from, to })
+      .getRawOne();
+
+    const income = +result.income || 0;
+    const expenses = +result.expenses || 0;
+    const balance = income - expenses;
+
+    return { income, expenses, balance };
   }
 
-  async getMonthlyAnalytics(userId: string, year: number): Promise<ResponseGetMonthlyAnalyticsDto> {
-    const query = `
-      SELECT 
-        EXTRACT(MONTH FROM date) AS month,
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
-      FROM transactions
-      WHERE user_id = $1 AND EXTRACT(YEAR FROM date) = $2
-      GROUP BY month
-      ORDER BY month ASC;
-    `;
-    const result = await this.client.query(query, [userId, year]);
-    return result.rows;
+  async getCountOfTransactions(userId: string, from: Date, to: Date): Promise<ResponseGetCountOfTransactionsDto> {
+    const result = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select([`COUNT(CASE WHEN transaction.type = 'income' THEN 1 END) AS income`, `COUNT(CASE WHEN transaction.type = 'expense' THEN 1 END) AS expenses`])
+      .where('transaction.user_id = :userId', { userId })
+      .andWhere('transaction.date BETWEEN :from AND :to', { from, to })
+      .getRawOne();
+
+    const income = +result.income || 0;
+    const expenses = +result.expenses || 0;
+
+    return { income, expenses };
+  }
+
+  async getDailyTrend(userId: string, from: Date, to: Date): Promise<ResponseDailyTransactionsDto[]> {
+    const result = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select([
+        'DATE(transaction.date) AS date',
+        `SUM(CASE WHEN transaction.type = 'income' THEN transaction.amount ELSE 0 END) AS income`,
+        `SUM(CASE WHEN transaction.type = 'expense' THEN transaction.amount ELSE 0 END) AS expense`,
+      ])
+      .where('transaction.user_id = :userId', { userId })
+      .andWhere('transaction.date BETWEEN :from AND :to', { from, to })
+      .groupBy('DATE(transaction.date)')
+      .orderBy('DATE(transaction.date)', 'ASC')
+      .getRawMany();
+
+    return result.map(row => ({
+      date: row.date,
+      income: +row.income || 0,
+      expense: +row.expense || 0,
+    }));
   }
 }
