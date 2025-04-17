@@ -16,7 +16,7 @@ export class EmailService {
 
   async sendPasswordResetEmail(to: string, name: string, resetLink: string): Promise<void> {
     await this.transporter.sendMail({
-      from: '"Finance Tracker" <zavadetska.valeria@lll.kpi.ua>',
+      from: `"Finance Tracker" <${process.env.FROM_EMAIL}>`,
       to,
       subject: 'Password Reset',
       html: `
@@ -31,7 +31,7 @@ export class EmailService {
     const { fromDate, toDate } = getMonthRange(-1);
 
     await this.transporter.sendMail({
-      from: '"Finance Tracker" <zavadetska.valeria@lll.kpi.ua>',
+      from: `"Finance Tracker" <${process.env.FROM_EMAIL}>`,
       to,
       subject: 'Your Monthly Financial Report',
       html: `

@@ -9,7 +9,7 @@ export function getCurrentMonthRange(): { fromDate: Date; toDate: Date } {
 
 export function formatDate(date: string | Date): string {
   const parsedDate = typeof date === 'string' ? new Date(date) : date;
-  return format(parsedDate, 'dd-MM-yyyy');
+  return format(parsedDate, 'yyyy-MM-dd');
 }
 
 export function getMonthRange(offset = 0) {

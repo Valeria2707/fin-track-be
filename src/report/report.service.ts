@@ -60,7 +60,7 @@ export class ReportService {
     return filePath;
   }
 
-  @Cron('*/30 * * * * *')
+  @Cron('0 0 1 * * *')
   async handleMonthlyReports() {
     const { fromDate, toDate } = getMonthRange(-1);
     const users = await this.userRepo.find({ select: ['id', 'email'] });
