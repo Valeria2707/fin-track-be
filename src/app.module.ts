@@ -7,7 +7,6 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { CategoryModule } from './category/category.module';
-import { ReminderModule } from './reminder/reminder.module';
 import { AiQueriesModule } from './ai-queries/ai-queries.module';
 import { ReportModule } from './report/report.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -24,10 +23,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     TransactionModule,
     CategoryModule,
-    // ReminderModule,
     // AiQueriesModule,
     ReportModule,
-    // AnalyticsModule,
+    AnalyticsModule,
     GoalModule,
   ],
   controllers: [AppController],

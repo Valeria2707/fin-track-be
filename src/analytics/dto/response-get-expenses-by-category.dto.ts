@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsString } from 'class-validator';
+import { TransactionType } from 'src/transaction/type/transaction';
 
 export class ResponseGetExpensesByCategoryDto {
   @ApiProperty()
@@ -8,5 +9,9 @@ export class ResponseGetExpensesByCategoryDto {
 
   @ApiProperty()
   @IsNumber()
-  total: number;
+  amount: number;
+
+  @ApiProperty()
+  @IsEnum({ enum: TransactionType })
+  type: TransactionType;
 }
