@@ -13,7 +13,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js'],
+  ignorePatterns: ['.eslintrc.js', 'dist/**'],
   rules: {
     'no-console': 'warn',
     'no-debugger': 'warn',
