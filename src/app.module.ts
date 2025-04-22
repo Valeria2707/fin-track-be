@@ -12,17 +12,19 @@ import { ReportModule } from './report/report.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { GoalModule } from './goal/goal.module';
 import { EmailService } from './email/email.service';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     UserModule,
     AuthModule,
     TransactionModule,
     CategoryModule,
     // AiQueriesModule,
-    // ReportModule,
+    ReportModule,
     AnalyticsModule,
     GoalModule,
   ],

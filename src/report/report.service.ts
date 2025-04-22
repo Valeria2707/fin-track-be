@@ -1,92 +1,74 @@
-import { Injectable, HttpException, HttpStatus, Inject } from '@nestjs/common';
-import { Client } from 'pg';
+import { Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { CategoryService } from 'src/category/category.service';
+import { Transaction } from 'src/transaction/entity/transaction';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { formatDate, getMonthRange } from 'src/utils/date';
+import { Cron } from '@nestjs/schedule';
+import { User } from 'src/user/entity/user';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class ReportService {
   constructor(
-    @Inject('PG_CLIENT') private readonly client: Client,
-    private readonly categoryService: CategoryService,
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    private readonly emailService: EmailService,
   ) {}
 
-  async generateExcelReport(
-    userId: string,
-    fromDate?: string,
-    toDate?: string,
-  ): Promise<string> {
-    try {
-      let query = 'SELECT * FROM transactions WHERE user_id = $1';
-      const params = [userId];
+  async generateExcelReport(userId: string, from: string | Date, to: string | Date): Promise<string> {
+    const result = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.category', 'category')
+      .where('transaction.user_id = :userId', { userId })
+      .andWhere('transaction.date BETWEEN :from AND :to', { from, to })
+      .orderBy('transaction.date', 'ASC')
+      .getMany();
 
-      if (fromDate && toDate) {
-        query += ' AND date BETWEEN $2 AND $3';
-        params.push(fromDate, toDate);
-      } else if (fromDate) {
-        query += ' AND date >= $2';
-        params.push(fromDate);
-      } else if (toDate) {
-        query += ' AND date <= $2';
-        params.push(toDate);
-      }
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Transactions Report');
 
-      query += ' ORDER BY date ASC';
+    worksheet.columns = [
+      { header: '№', key: 'number', width: 10 },
+      { header: 'Type', key: 'type', width: 15 },
+      { header: 'Category', key: 'category_name', width: 20 },
+      { header: 'Amount', key: 'amount', width: 15 },
+      { header: 'Date', key: 'date', width: 20 },
+      { header: 'Description', key: 'description', width: 30 },
+    ];
 
-      const result = await this.client.query(query, params);
-      const transactions = result.rows;
+    worksheet.addRows(
+      result.map((t, index) => ({
+        number: index + 1,
+        type: t.type,
+        category_name: t.category?.name || 'Unknown',
+        amount: t.amount,
+        date: formatDate(t.date),
+        description: t.description,
+      })),
+    );
 
-      if (transactions.length === 0) {
-        throw new HttpException(
-          'No transactions found for the specified user and period',
-          HttpStatus.NOT_FOUND,
-        );
-      }
+    const reportsDir = path.resolve(__dirname, '../../reports');
 
-      const uniqueCategoryIds = [
-        ...new Set(transactions.map(t => t.category_id)),
-      ];
-      const categories = await Promise.all(
-        uniqueCategoryIds.map(id => this.categoryService.findOne(id as number)),
-      );
-      const categoryMap = Object.fromEntries(
-        categories.map(c => [c.id, c.name]),
-      );
+    if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir);
+    const filePath = path.join(reportsDir, `transactions_report_${formatDate(from)}-to-${formatDate(to)}.xlsx`);
+    await workbook.xlsx.writeFile(filePath);
 
-      transactions.forEach(transaction => {
-        transaction.category_name =
-          categoryMap[transaction.category_id] || 'Unknown';
-      });
+    return filePath;
+  }
 
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Transactions Report');
+  @Cron('0 0 1 * * *')
+  async handleMonthlyReports() {
+    const { fromDate, toDate } = getMonthRange(-1);
+    const users = await this.userRepo.find({ select: ['id', 'email'] });
 
-      worksheet.columns = [
-        { header: 'ID', key: 'id', width: 10 },
-        { header: 'Type', key: 'type', width: 15 },
-        { header: 'Category', key: 'category_name', width: 20 },
-        { header: 'Amount', key: 'amount', width: 15 },
-        { header: 'Date', key: 'date', width: 20 },
-        { header: 'Description', key: 'description', width: 30 },
-      ];
-      worksheet.addRows(transactions);
+    for (const u of users) {
+      const filePath = await this.generateExcelReport(u.id, fromDate, toDate);
 
-      const reportsDir = path.resolve(__dirname, '../../reports');
-      if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir);
-      const filePath = path.join(
-        reportsDir,
-        `transactions_report_${userId}.xlsx`,
-      );
-      await workbook.xlsx.writeFile(filePath);
-
-      return filePath;
-    } catch (error) {
-      console.error('Error generating report:', error.message);
-      throw new HttpException(
-        'Failed to generate report',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      await this.emailService.sendEmailWithAttachment(u.email, filePath);
     }
   }
 }
