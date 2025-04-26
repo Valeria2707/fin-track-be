@@ -1,99 +1,66 @@
-import { HttpException, HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Client } from 'pg';
-import { IAiQuery } from './interface/ai-query';
-import { ResponseSendQueryDto } from './dto';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AiQuery } from './entity/ai-query';
+import OpenAI from 'openai';
+import { TransactionService } from 'src/transaction/transaction.service';
+import { getMonthRange } from 'src/utils/date';
+import { buildTransactionContext } from 'src/utils/context';
 
 @Injectable()
 export class AiQueriesService {
-  private readonly AI_API_URL: string;
-  private readonly API_KEY: string;
-  private readonly logger = new Logger(AiQueriesService.name);
   constructor(
-    @Inject('PG_CLIENT') private readonly client: Client,
-    private readonly configService: ConfigService,
-  ) {
-    this.AI_API_URL = this.configService.get<string>('AI_API_URL', '');
-    this.API_KEY = this.configService.get<string>('AI_API_KEY', '');
-  }
+    private readonly openai: OpenAI,
+    @InjectRepository(AiQuery)
+    private readonly aiQueryRepository: Repository<AiQuery>,
+    private readonly transactionService: TransactionService,
+  ) {}
 
-  async sendQuery(userId: number, userMessage: string, context: Record<string, unknown>): Promise<ResponseSendQueryDto> {
-    const payload = {
-      model: 'jamba-1.5-large',
-      messages: [
-        { role: 'system', content: 'You are a financial advisor.' },
-        { role: 'user', content: userMessage },
-      ],
-      documents: [
-        {
-          name: 'financial_data',
-          content: JSON.stringify(context),
-          type: 'text',
-        },
-      ],
-      n: 1,
-      max_tokens: 2048,
-      temperature: 0.4,
-      top_p: 1,
-      stop: [],
-      response_format: { type: 'text' },
+  async sendQuery(userId: string, userMessage: string): Promise<string> {
+    const [currentMonthRange, previousMonthRange] = [getMonthRange(0), getMonthRange(-1)];
+
+    const [currentTransactions, previousTransactions] = await Promise.all([
+      this.transactionService.findAll(userId, undefined, undefined, currentMonthRange.fromDate, currentMonthRange.toDate, 1, 9999),
+      this.transactionService.findAll(userId, undefined, undefined, previousMonthRange.fromDate, previousMonthRange.toDate, 1, 9999),
+    ]);
+
+    const context = {
+      currentMonth: buildTransactionContext(currentTransactions.data),
+      previousMonth: buildTransactionContext(previousTransactions.data),
     };
 
-    try {
-      const response = await fetch(this.AI_API_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.API_KEY}`,
-          'Content-Type': 'application/json',
+    const contextString = JSON.stringify(context, null, 2);
+
+    const completion = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a financial advisor. Use the following user data:\n${contextString}`,
         },
-        body: JSON.stringify(payload),
-      });
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.4,
+      max_tokens: 2048,
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(`AI API Error: ${response.status} - ${errorText}`);
-        throw new HttpException(`AI API Error: ${response.statusText}`, response.status);
-      }
+    const answer = completion.choices[0].message?.content ?? '';
 
-      const data = await response.json();
+    await this.aiQueryRepository.save(
+      this.aiQueryRepository.create({
+        user_id: userId,
+        query: userMessage,
+        response: answer,
+      }),
+    );
 
-      if (!data.choices || data.choices.length === 0) {
-        this.logger.warn(`AI API returned no choices for userId: ${userId}`);
-        throw new HttpException('AI API did not return any choices.', HttpStatus.INTERNAL_SERVER_ERROR);
-      }
-
-      const completionText = data.choices[0]?.message?.content;
-      await this.saveToDatabase(userId, userMessage, completionText);
-
-      if (!completionText) {
-        this.logger.warn(`Empty AI response for userId: ${userId}`);
-        throw new HttpException('Completion message content is undefined or empty.', HttpStatus.INTERNAL_SERVER_ERROR);
-      }
-
-      return completionText;
-    } catch (error) {
-      this.logger.error(`Fetch failed for userId: ${userId}, Error: ${error.message}`);
-      throw new HttpException(`Fetch failed: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return answer;
   }
 
-  private async saveToDatabase(userId: number, query: string, response: string): Promise<void> {
-    const date = new Date().toISOString();
-    try {
-      await this.client.query('INSERT INTO ai_queries (user_id, query, response, date) VALUES ($1, $2, $3, $4)', [userId, query, response, date]);
-    } catch (error) {
-      this.logger.error(`Database save failed for userId: ${userId}, Error: ${error.message}`);
-      throw new HttpException('Failed to save data to the database', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  async getAllQueries(): Promise<IAiQuery[]> {
-    try {
-      const result = await this.client.query('SELECT * FROM ai_queries ORDER BY date DESC');
-      return result.rows;
-    } catch (error) {
-      this.logger.error(`Error retrieving data from database: ${error.message}`);
-      throw new HttpException('Failed to retrieve data from the database', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+  async getAllQueries(userId: string): Promise<AiQuery[]> {
+    return await this.aiQueryRepository.find({
+      where: { user_id: userId },
+      order: { date: 'DESC' },
+    });
   }
 }

@@ -23,7 +23,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     TransactionModule,
     CategoryModule,
-    // AiQueriesModule,
+    AiQueriesModule,
     ReportModule,
     AnalyticsModule,
     GoalModule,
