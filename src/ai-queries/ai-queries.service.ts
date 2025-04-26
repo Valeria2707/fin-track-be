@@ -61,6 +61,7 @@ export class AiQueriesService {
     return await this.aiQueryRepository.find({
       where: { user_id: userId },
       order: { date: 'DESC' },
+      take: 5,
     });
   }
 }
