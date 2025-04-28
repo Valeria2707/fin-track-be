@@ -16,7 +16,7 @@ export class GoalOwnershipGuard implements CanActivate {
 
     const goal = await this.goalService.getGoalById(goalId);
 
-    if (!goal || goal.user_id !== userId) {
+    if (!goal || goal.userId !== userId) {
       return false;
     }
 

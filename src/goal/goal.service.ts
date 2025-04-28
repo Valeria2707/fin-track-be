@@ -18,13 +18,13 @@ export class GoalService {
   ) {}
 
   async addGoal(goalData: CreateGoalDto, userId: string): Promise<Goal> {
-    const goal = this.goalRepository.create({ ...goalData, user_id: userId });
+    const goal = this.goalRepository.create({ ...goalData, userId });
     return this.goalRepository.save(goal);
   }
 
   async getAllGoals(userId: string): Promise<Goal[]> {
     return this.goalRepository.find({
-      where: { user_id: userId },
+      where: { userId },
       order: { deadline: 'ASC' },
     });
   }
