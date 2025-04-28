@@ -29,10 +29,10 @@ export class AiQueriesService {
       previousMonth: buildTransactionContext(previousTransactions.data),
     };
 
-    const contextString = JSON.stringify(context, null, 2);
+    const contextString = JSON.stringify(context);
 
     const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: process.env.OPENAI_MODEL,
       messages: [
         {
           role: 'system',
@@ -41,14 +41,14 @@ export class AiQueriesService {
         { role: 'user', content: userMessage },
       ],
       temperature: 0.4,
-      max_tokens: 2048,
+      max_tokens: Number(process.env.OPENAI_MAX_TOKENS),
     });
 
     const answer = completion.choices[0].message?.content ?? '';
 
     await this.aiQueryRepository.save(
       this.aiQueryRepository.create({
-        user_id: userId,
+        userId,
         query: userMessage,
         response: answer,
       }),
@@ -59,7 +59,7 @@ export class AiQueriesService {
 
   async getAllQueries(userId: string): Promise<AiQuery[]> {
     return await this.aiQueryRepository.find({
-      where: { user_id: userId },
+      where: { userId },
       order: { date: 'DESC' },
       take: 5,
     });

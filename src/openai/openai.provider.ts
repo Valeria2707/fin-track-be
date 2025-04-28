@@ -1,4 +1,3 @@
-// src/openai/openai.provider.ts
 import { OpenAI } from 'openai';
 import { ConfigService } from '@nestjs/config';
 

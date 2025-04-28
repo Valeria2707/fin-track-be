@@ -6,8 +6,8 @@ export class Transaction {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  user_id: string;
+  @Column({ name: 'user_id' })
+  userId: string;
 
   @Column()
   type: string;

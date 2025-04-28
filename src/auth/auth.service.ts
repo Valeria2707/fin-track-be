@@ -43,8 +43,13 @@ export class AuthService {
   async signIn(signInUserDto: SignInUserDto) {
     const user = await this.userService.findOneByEmail(signInUserDto.email);
 
+    if (!user) {
+      throw new AppException('Wrong password or email');
+    }
+
     const passwordMatches = await argon2.verify(user.password, signInUserDto.password);
-    if (!passwordMatches || !user) {
+
+    if (!passwordMatches) {
       throw new AppException('Wrong password or email');
     }
 
