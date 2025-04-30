@@ -39,6 +39,6 @@ export class AiQueriesController {
   async getAllQueries(@Req() req: Request, @Query('limit') limit?: number) {
     const userId = req.user['sub'];
     const parsedLimit = Number(limit) || 5;
-    return await this.aiQueriesService.getAllQueries(userId, Number(parsedLimit));
+    return await this.aiQueriesService.getAllQueries(userId, parsedLimit);
   }
 }
