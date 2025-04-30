@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AiQueriesService } from './ai-queries.service';
 import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ResponseGetQueriesDto, ResponseSendQueryDto, SendQueryDto } from './dto';
@@ -36,8 +36,9 @@ export class AiQueriesController {
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Get()
-  async getAllQueries(@Req() req: Request) {
+  async getAllQueries(@Req() req: Request, @Query('limit') limit?: number) {
     const userId = req.user['sub'];
-    return await this.aiQueriesService.getAllQueries(userId);
+    const parsedLimit = Number(limit) || 5;
+    return await this.aiQueriesService.getAllQueries(userId, Number(parsedLimit));
   }
 }

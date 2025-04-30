@@ -36,7 +36,7 @@ export class AiQueriesService {
       messages: [
         {
           role: 'system',
-          content: `You are a financial advisor. Use the following user data:\n${contextString}`,
+          content: `${process.env.OPENAI_SYSTEM_PROMPT}${contextString}`,
         },
         { role: 'user', content: userMessage },
       ],
@@ -57,11 +57,11 @@ export class AiQueriesService {
     return answer;
   }
 
-  async getAllQueries(userId: string): Promise<AiQuery[]> {
+  async getAllQueries(userId: string, limit: number): Promise<AiQuery[]> {
     return await this.aiQueryRepository.find({
       where: { userId },
       order: { date: 'DESC' },
-      take: 5,
+      take: limit,
     });
   }
 }
