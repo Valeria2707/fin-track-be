@@ -8,8 +8,8 @@ export class ResponseGetQueriesDto {
   id: number;
 
   @ApiProperty()
-  @IsNumber()
-  user_id: number;
+  @IsString()
+  userId: string;
 
   @ApiProperty()
   @IsString()

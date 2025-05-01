@@ -1,18 +1,12 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AiQueriesService } from './ai-queries.service';
-import {
-  ApiBadRequestResponse,
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import {
-  ResponseGetQueriesDto,
-  ResponseSendQueryDto,
-  SendQueryDto,
-} from './dto';
+import { ApiBadRequestResponse, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ResponseGetQueriesDto, ResponseSendQueryDto, SendQueryDto } from './dto';
+import { Request } from 'express';
+import { AccessTokenGuard } from 'src/guards/access-token.guard';
 
-@ApiTags('Ai-Gueries')
+@UseGuards(AccessTokenGuard)
+@ApiTags('Ai-Queries')
 @Controller('ai-queries')
 export class AiQueriesController {
   constructor(private readonly aiQueriesService: AiQueriesService) {}
@@ -24,13 +18,14 @@ export class AiQueriesController {
     isArray: false,
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
-  @Post('query')
-  async sendQuery(@Body() sendQueryDto: SendQueryDto) {
-    const { userId, message, context } = sendQueryDto;
+  @Post()
+  async sendQuery(@Req() req: Request, @Body() sendQueryDto: SendQueryDto) {
+    const userId = req.user['sub'];
+    const { message } = sendQueryDto;
 
-    return {
-      response: await this.aiQueriesService.sendQuery(userId, message, context),
-    };
+    const response = await this.aiQueriesService.sendQuery(userId, message);
+
+    return { response };
   }
 
   @ApiOperation({ summary: 'Get all queries.' })
@@ -41,7 +36,9 @@ export class AiQueriesController {
   })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @Get()
-  async getAllQueries() {
-    return await this.aiQueriesService.getAllQueries();
+  async getAllQueries(@Req() req: Request, @Query('limit') limit?: number) {
+    const userId = req.user['sub'];
+    const parsedLimit = Number(limit) || 5;
+    return await this.aiQueriesService.getAllQueries(userId, parsedLimit);
   }
 }

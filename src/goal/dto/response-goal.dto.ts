@@ -10,7 +10,7 @@ export class ResponseGoalDto {
 
   @ApiProperty()
   @IsString()
-  user_id: string;
+  userId: string;
 
   @ApiProperty()
   @IsString()

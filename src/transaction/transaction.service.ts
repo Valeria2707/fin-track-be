@@ -17,7 +17,7 @@ export class TransactionService {
   async create(createTransactionDto: CreateTransactionDto, userId: string): Promise<Transaction> {
     const transaction = this.transactionRepository.create({
       ...createTransactionDto,
-      user_id: userId,
+      userId,
       category: { id: createTransactionDto.category_id },
     });
 
