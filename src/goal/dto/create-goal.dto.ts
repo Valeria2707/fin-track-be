@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsDate, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { Priority } from '../enum/goal';
+import { Priority } from '../type/goal';
 
 export class CreateGoalDto {
   @ApiProperty({

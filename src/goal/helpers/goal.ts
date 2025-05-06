@@ -8,7 +8,7 @@ import {
   TARGET_AMOUNT_LOW_MAX,
   TARGET_AMOUNT_MEDIUM_MAX,
 } from '../constants/goal';
-import { Deadline, TargetAmount } from '../enum/goal';
+import { Deadline, RecommendedGoal, TargetAmount } from '../type/goal';
 
 export function getTargetAmountLabel(amount: number): TargetAmount {
   switch (true) {
@@ -93,4 +93,32 @@ export function computeAHPMetrics(matrix: number[][]) {
   const weights = calculateGeometricMeanWeights(matrix);
 
   return { lambdaMax, CI, CR, weights };
+}
+
+export function distributeRecommendedSum(goals: RecommendedGoal[]) {
+  const result = goals.map(goal => structuredClone(goal));
+  let overflow = 0;
+
+  for (const item of result) {
+    const { target_amount, current_amount } = item.goal;
+    const remaining = Number(target_amount) - Number(current_amount);
+
+    if (remaining <= 0) {
+      overflow += item.recommendedSum;
+      item.recommendedSum = 0;
+      continue;
+    }
+
+    const total = item.recommendedSum + overflow;
+
+    if (total > remaining) {
+      item.recommendedSum = Number(remaining.toFixed(2));
+      overflow = Number((total - remaining).toFixed(2));
+    } else {
+      item.recommendedSum = Number(total.toFixed(2));
+      overflow = 0;
+    }
+  }
+
+  return result;
 }
