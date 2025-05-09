@@ -18,7 +18,7 @@ const AppDataSource = new DataSource({
   synchronize: false,
   logging: isDev,
   entities: [Category, Transaction, User, Goal, AiQuery],
-  migrations: [isDev ? 'src/migration/**/*.{ts,js}' : 'dist/migration/**/*.{js,ts}'],
+  migrations: [isDev ? 'src/database/migrations/**/*.{ts,js}' : 'dist/database/migrations/**/*.{js,ts}'],
   migrationsTableName: 'migrations',
 });
 

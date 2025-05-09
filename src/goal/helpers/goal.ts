@@ -111,13 +111,9 @@ export function distributeRecommendedSum(goals: RecommendedGoal[]) {
 
     const total = item.recommendedSum + overflow;
 
-    if (total > remaining) {
-      item.recommendedSum = Number(remaining.toFixed(2));
-      overflow = Number((total - remaining).toFixed(2));
-    } else {
-      item.recommendedSum = Number(total.toFixed(2));
-      overflow = 0;
-    }
+    const recommended = Math.min(total, remaining);
+    item.recommendedSum = Number(recommended.toFixed(2));
+    overflow = Number((total - recommended).toFixed(2));
   }
 
   return result;
