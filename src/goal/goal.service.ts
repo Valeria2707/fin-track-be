@@ -4,10 +4,10 @@ import { Repository } from 'typeorm';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
 import { Goal } from './entity/goal';
-import { buildComparisonMatrix, computeAHPMetrics, getDeadlineLabel, getTargetAmountLabel } from './helpers/goal';
+import { buildComparisonMatrix, computeAHPMetrics, distributeRecommendedSum, getDeadlineLabel, getTargetAmountLabel } from './helpers/goal';
 import { AHP_CR_THRESHOLD, criteriaComparisonMatrix } from './constants/goal';
 import { TransactionService } from 'src/transaction/transaction.service';
-import { DEADLINE_WEIGHTS, PRIORITY_WEIGHTS, TARGET_AMOUNT_WEIGHTS } from './enum/goal';
+import { DEADLINE_WEIGHTS, PRIORITY_WEIGHTS, RecommendedGoal, TARGET_AMOUNT_WEIGHTS } from './type/goal';
 
 @Injectable()
 export class GoalService {
@@ -111,11 +111,15 @@ export class GoalService {
 
     const shouldZeroOut = leftover <= 0;
 
-    return goals
+    const recommended: RecommendedGoal[] = goals
       .map((goal, i) => ({
         goal,
         recommendedSum: shouldZeroOut ? 0 : +(globalGoalWeights[i] * leftover).toFixed(2),
       }))
       .sort((a, b) => b.recommendedSum - a.recommendedSum);
+
+    const distributed = distributeRecommendedSum(recommended);
+
+    return distributed;
   }
 }

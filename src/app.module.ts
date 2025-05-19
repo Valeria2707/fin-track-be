@@ -4,7 +4,6 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
-import { DatabaseModule } from './database/database.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { CategoryModule } from './category/category.module';
 import { AiQueriesModule } from './ai-queries/ai-queries.module';
@@ -13,12 +12,14 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { GoalModule } from './goal/goal.module';
 import { EmailService } from './email/email.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import AppDataSource from './data-source';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRoot(AppDataSource.options),
     ScheduleModule.forRoot(),
-    DatabaseModule,
     UserModule,
     AuthModule,
     TransactionModule,

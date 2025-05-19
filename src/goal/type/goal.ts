@@ -1,3 +1,5 @@
+import { Goal } from '../entity/goal';
+
 export enum Priority {
   LOW = 'low',
   MEDIUM = 'medium',
@@ -33,3 +35,5 @@ export const DEADLINE_WEIGHTS = {
   [Deadline.SOON]: 3,
   [Deadline.URGENT]: 5,
 };
+
+export type RecommendedGoal = { goal: Goal; recommendedSum: number };

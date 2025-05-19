@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { Priority } from '../enum/goal';
+import { Priority } from '../type/goal';
 
 @Entity('goals')
 export class Goal {
