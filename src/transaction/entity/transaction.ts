@@ -12,7 +12,7 @@ export class Transaction {
   @Column()
   type: string;
 
-  @Column('decimal')
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   amount: number;
 
   @Column('timestamp')

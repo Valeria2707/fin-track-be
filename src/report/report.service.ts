@@ -20,11 +20,16 @@ export class ReportService {
   ) {}
 
   async generateExcelReport(userId: string, from: string | Date, to: string | Date): Promise<string> {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    toDate.setHours(23, 59, 59, 999);
+
     const result = await this.transactionRepo
       .createQueryBuilder('transaction')
       .leftJoinAndSelect('transaction.category', 'category')
       .where('transaction.user_id = :userId', { userId })
-      .andWhere('transaction.date BETWEEN :from AND :to', { from, to })
+      .andWhere('transaction.date BETWEEN :from AND :to', { from: fromDate, to: toDate })
       .orderBy('transaction.date', 'ASC')
       .getMany();
 
